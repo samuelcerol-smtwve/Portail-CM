@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { getClients, getPosts, getFactures, getStrategies, updatePostStatus } from "./airtable.js";
 
 // ─── PALETTE (Garden-inspired: dark bg, warm coral/pink accents, organic feel) ───
 const C = {
@@ -418,19 +419,73 @@ export default function App() {
   const [tab, setTab] = useState("dashboard");
   const [selClient, setSelClient] = useState(null);
   const [posts, setPosts] = useState(POSTS);
+  const [clients, setClients] = useState(CLIENTS);
+  const [factures, setFactures] = useState(INVOICES);
+  const [strategies, setStrategies] = useState(STRATEGIES);
+  const [loading, setLoading] = useState(false);
+  const [airtableReady, setAirtableReady] = useState(false);
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
 
+  // ─── CHARGER LES DONNÉES AIRTABLE ───
+  useEffect(() => {
+    const apiKey = import.meta.env.VITE_AIRTABLE_API_KEY;
+    const baseId = import.meta.env.VITE_AIRTABLE_BASE_ID;
+    if (!apiKey || !baseId || apiKey === "your_airtable_api_key_here") return;
+
+    setLoading(true);
+    Promise.all([getClients(), getPosts(), getFactures(), getStrategies()])
+      .then(([cls, psts, facts, strats]) => {
+        if (cls.length > 0) setClients(cls);
+        if (psts.length > 0) setPosts(psts);
+
+        // Factures par clientId
+        if (facts.length > 0) {
+          const factsByClient = {};
+          facts.forEach(f => { if (!factsByClient[f.clientId]) factsByClient[f.clientId] = []; factsByClient[f.clientId].push(f); });
+          setFactures(factsByClient);
+        }
+
+        // Stratégies par clientId
+        if (strats.length > 0) {
+          const stratsByClient = {};
+          strats.forEach(s => { stratsByClient[s.clientId] = s; });
+          setStrategies(stratsByClient);
+        }
+
+        setAirtableReady(true);
+      })
+      .catch(err => { console.error("Airtable error:", err); fire("⚠️ Erreur connexion Airtable", "err"); })
+      .finally(() => setLoading(false));
+  }, []);
+
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 2500); return () => clearTimeout(t); } }, [toast]);
   const fire = (msg, type) => setToast({ msg, type });
-  const approve = (id) => { setPosts(p => p.map(x => x.id === id ? { ...x, status: "approved", comments: [{ author: "client", text: "Validé ✓", date: "à l'instant" }] } : x)); fire("✅ Post validé — CM notifiée"); };
-  const revise = (id, c) => { setPosts(p => p.map(x => x.id === id ? { ...x, status: "revision", comments: [{ author: "client", text: c || "Modification demandée", date: "à l'instant" }] } : x)); fire("✏️ Demande envoyée", "rev"); };
+
+  const approve = async (id) => {
+    const post = posts.find(p => p.id === id);
+    if (post?.airtableId && airtableReady) {
+      await updatePostStatus(post.airtableId, "approved", "Validé ✓").catch(console.error);
+    }
+    setPosts(p => p.map(x => x.id === id ? { ...x, status: "approved", comments: [{ author: "client", text: "Validé ✓", date: "à l'instant" }] } : x));
+    fire("✅ Post validé — CM notifiée");
+  };
+
+  const revise = async (id, c) => {
+    const post = posts.find(p => p.id === id);
+    if (post?.airtableId && airtableReady) {
+      await updatePostStatus(post.airtableId, "revision", c || "Modification demandée").catch(console.error);
+    }
+    setPosts(p => p.map(x => x.id === id ? { ...x, status: "revision", comments: [{ author: "client", text: c || "Modification demandée", date: "à l'instant" }] } : x));
+    fire("✏️ Demande envoyée", "rev");
+  };
 
   const isClient = viewMode === "client";
   const filtered = posts.filter(p => selClient ? p.clientId === selClient : true);
   const visible = isClient ? filtered.filter(p => p.status !== "draft") : filtered;
   const stats = { total: posts.length, pending: posts.filter(p => p.status === "pending").length, late: posts.filter(p => p.status === "late").length, approved: posts.filter(p => p.status === "approved").length, revision: posts.filter(p => p.status === "revision").length };
 
+  const findClient = (id) => clients.find(c => c.id === id || c.airtableId === id);
   const cmTabs = [{ id: "dashboard", icon: "📊", label: "Dashboard" }, { id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Posts" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Facturation" }, { id: "strategy", icon: "🎯", label: "Stratégie" }, { id: "workflows", icon: "🔔", label: "Relances clients" }, { id: "schema", icon: "🗄️", label: "Airtable" }];
   const clientTabs = [{ id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Contenus" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Factures" }, { id: "strategy", icon: "🎯", label: "Stratégie" }];
   const tabs = isClient ? clientTabs : cmTabs;
@@ -459,7 +514,8 @@ export default function App() {
           <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: -0.5 }}>
             {isClient ? "Mon espace" : "petit bout de com"}
           </span>
-          {isClient && selClient && <span style={{ fontSize: 12, color: C.muted, fontWeight: 400 }}>— {CLIENTS.find(c => c.id === selClient)?.name}</span>}
+          {isClient && selClient && <span style={{ fontSize: 12, color: C.muted, fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
+          {loading && <span style={{ fontSize: 10, color: C.muted, marginLeft: 8, animation: "pulse 1s infinite" }}>⟳ Chargement...</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}>
           <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${C.border}` }}>
@@ -484,7 +540,7 @@ export default function App() {
           </div>
           <div style={{ padding: "0 18px", fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 8 }}>{isClient ? "Simuler" : "Clients"}</div>
           {!isClient && <button onClick={() => setSelClient(null)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: !selClient ? C.card : "transparent", color: C.text, fontWeight: !selClient ? 600 : 400, borderRadius: 6 }}>Tous</button>}
-          {CLIENTS.map(c => (
+          {clients.map(c => (
             <button key={c.id} onClick={() => setSelClient(c.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: selClient === c.id ? C.card : "transparent", color: C.text, fontWeight: selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
               <Avatar client={c} size={22} /> {c.name}
             </button>
@@ -512,7 +568,7 @@ export default function App() {
               </div>
               <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: C.textSoft }}>Par client</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 10, marginBottom: 22 }}>
-                {CLIENTS.map(cl => {
+                {clients.map(cl => {
                   const cp = posts.filter(p => p.clientId === cl.id);
                   const pe = cp.filter(p => p.status === "pending" || p.status === "late").length;
                   const ap = cp.filter(p => p.status === "approved").length;
@@ -531,7 +587,7 @@ export default function App() {
               </div>
               <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: C.textSoft }}>🔥 Urgents</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(255px,1fr))", gap: 12 }}>
-                {posts.filter(p => p.status === "late" || (p.status === "pending" && p.hours > 48)).map(p => <PostCard key={p.id} post={p} client={CLIENTS.find(c => c.id === p.clientId)} isClient={false} onApprove={approve} onRevision={revise} />)}
+                {posts.filter(p => p.status === "late" || (p.status === "pending" && p.hours > 48)).map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={false} onApprove={approve} onRevision={revise} />)}
               </div>
             </div>
           )}
@@ -540,7 +596,7 @@ export default function App() {
           {tab === "calendar" && (
             <div style={{ animation: "fadeIn .3s ease" }}>
               <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 4 }}>{isClient ? "Mon calendrier" : "Calendrier"}</h2>
-              <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Mars 2026{selClient && !isClient ? ` — ${CLIENTS.find(c => c.id === selClient)?.name}` : ""}</p>
+              <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Mars 2026{selClient && !isClient ? ` — ${clients.find(c => c.id === selClient)?.name}` : ""}</p>
               <div style={{ display: "flex", gap: 20 }}>
                 <div style={{ flex: 1 }}><Calendar posts={visible} onSelect={setCalSel} selectedId={calSel} /></div>
                 <div style={{ width: 290, flexShrink: 0 }}>
@@ -573,10 +629,10 @@ export default function App() {
           {tab === "posts" && (
             <div style={{ animation: "fadeIn .3s ease" }}>
               <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 4 }}>{isClient ? "Contenus à valider" : "Tous les posts"}</h2>
-              <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{selClient ? CLIENTS.find(c => c.id === selClient)?.name : "Tous"} — Mars 2026</p>
+              <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{selClient ? clients.find(c => c.id === selClient)?.name : "Tous"} — Mars 2026</p>
               {isClient && <div style={{ padding: "10px 14px", borderRadius: 12, marginBottom: 16, backgroundColor: C.accentSoft, border: `1px solid ${C.accent}25`, fontSize: 12, color: C.textSoft }}>💡 <strong style={{ color: C.accent }}>Validez</strong> ou <strong style={{ color: C.accent }}>demandez une modification</strong>. Notification instantanée.</div>}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
-                {visible.sort((a, b) => a.day - b.day).map(p => <PostCard key={p.id} post={p} client={CLIENTS.find(c => c.id === p.clientId)} isClient={isClient} onApprove={approve} onRevision={revise} />)}
+                {visible.sort((a, b) => a.day - b.day).map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={isClient} onApprove={approve} onRevision={revise} />)}
               </div>
               {visible.length === 0 && <div style={{ textAlign: "center", padding: 50, color: C.muted }}><div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>Aucun post</div>}
             </div>
@@ -587,7 +643,7 @@ export default function App() {
             <div style={{ animation: "fadeIn .3s ease" }}>
               {selClient ? (() => {
                 const sd = STATS_DATA[selClient];
-                const cl = CLIENTS.find(c => c.id === selClient);
+                const cl = clients.find(c => c.id === selClient);
                 if (!sd) return null;
                 const maxReach = Math.max(...sd.monthly.map(m => m.reach));
                 const maxFollowers = Math.max(...sd.monthly.map(m => m.followers));
@@ -741,7 +797,7 @@ export default function App() {
                   <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 16 }}>Statistiques</h2>
                   <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Sélectionnez un client pour voir ses statistiques détaillées</p>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
-                    {CLIENTS.map(cl => {
+                    {clients.map(cl => {
                       const sd = STATS_DATA[cl.id];
                       return (
                         <div key={cl.id} onClick={() => setSelClient(cl.id)} style={{ backgroundColor: C.card, borderRadius: 14, padding: 16, border: `1px solid ${C.border}`, cursor: "pointer", transition: "all .2s" }}
@@ -766,8 +822,8 @@ export default function App() {
           {tab === "billing" && (
             <div style={{ animation: "fadeIn .3s ease" }}>
               {selClient ? (() => {
-                const invoices = INVOICES[selClient] || [];
-                const cl = CLIENTS.find(c => c.id === selClient);
+                const invoices = factures[selClient] || [];
+                const cl = clients.find(c => c.id === selClient);
                 const totalPaid = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
                 const totalPending = invoices.filter(i => i.status === "pending" || i.status === "overdue").reduce((s, i) => s + i.amount, 0);
 
@@ -883,8 +939,8 @@ export default function App() {
                   <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 16 }}>Facturation</h2>
                   <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Vue d'ensemble par client</p>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
-                    {CLIENTS.map(cl => {
-                      const invoices = INVOICES[cl.id] || [];
+                    {clients.map(cl => {
+                      const invoices = factures[cl.id] || [];
                       const paid = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
                       const pending = invoices.filter(i => i.status !== "paid").reduce((s, i) => s + i.amount, 0);
                       const hasOverdue = invoices.some(i => i.status === "overdue");
@@ -915,14 +971,14 @@ export default function App() {
           {/* STRATEGY */}
           {tab === "strategy" && (
             <div style={{ maxWidth: 660, animation: "fadeIn .3s ease" }}>
-              {selClient ? <StrategyPanel strategy={STRATEGIES[selClient]} isClient={isClient} onSuggest={() => fire("💬 Suggestion envoyée")} />
+              {selClient ? <StrategyPanel strategy={strategies[selClient]} isClient={isClient} onSuggest={() => fire("💬 Suggestion envoyée")} />
               : <div><h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 16 }}>Stratégies</h2>
                 <div style={{ display: "grid", gap: 12 }}>
-                  {CLIENTS.map(cl => (
+                  {clients.map(cl => (
                     <div key={cl.id} onClick={() => setSelClient(cl.id)} style={{ backgroundColor: C.card, borderRadius: 14, padding: 16, border: `1px solid ${C.border}`, cursor: "pointer", transition: "all .2s" }}
                       onMouseEnter={e => e.currentTarget.style.borderColor = cl.color} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}><Avatar client={cl} size={28} /><span style={{ fontWeight: 600, fontSize: 14 }}>{cl.name}</span></div>
-                      <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.5 }}>{STRATEGIES[cl.id]?.objective}</p>
+                      <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.5 }}>{strategies[cl.id]?.objective}</p>
                     </div>
                   ))}
                 </div></div>}
