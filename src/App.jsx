@@ -427,12 +427,8 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
 
-  // ─── CHARGER LES DONNÉES AIRTABLE ───
+  // ─── CHARGER LES DONNÉES AIRTABLE (via proxy /api/airtable) ───
   useEffect(() => {
-    const apiKey = import.meta.env.VITE_AIRTABLE_API_KEY;
-    const baseId = import.meta.env.VITE_AIRTABLE_BASE_ID;
-    if (!apiKey || !baseId || apiKey === "your_airtable_api_key_here") return;
-
     setLoading(true);
     Promise.all([getClients(), getPosts(), getFactures(), getStrategies()])
       .then(([cls, psts, facts, strats]) => {

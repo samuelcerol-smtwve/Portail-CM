@@ -1,12 +1,7 @@
-// ─── SERVICE AIRTABLE ───
-const API_KEY = import.meta.env.VITE_AIRTABLE_API_KEY;
-const BASE_ID = import.meta.env.VITE_AIRTABLE_BASE_ID;
-const BASE_URL = `https://api.airtable.com/v0/${BASE_ID}`;
+// ─── SERVICE AIRTABLE (via proxy /api/airtable) ───
+// La clé API reste côté serveur — le client ne voit jamais le token
 
-const headers = {
-  Authorization: `Bearer ${API_KEY}`,
-  "Content-Type": "application/json",
-};
+const PROXY = "/api/airtable";
 
 // ─── COULEURS PAR DÉFAUT ───
 const COLORS = ["#A78BFA", "#8B6EC0", "#4A9E62", "#C8A06A", "#5B8EC4", "#D4886B"];
@@ -16,14 +11,45 @@ async function fetchAll(table, params = "") {
   let records = [];
   let offset = null;
   do {
-    const url = `${BASE_URL}/${encodeURIComponent(table)}?${params}${offset ? `&offset=${offset}` : ""}`;
-    const res = await fetch(url, { headers });
-    if (!res.ok) throw new Error(`Airtable error: ${res.status}`);
+    const sep = params ? "&" : "";
+    const offsetParam = offset ? `${sep}offset=${offset}` : "";
+    const url = `${PROXY}?table=${encodeURIComponent(table)}&${params}${offsetParam}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Proxy error: ${res.status}`);
+    }
     const data = await res.json();
     records = [...records, ...data.records];
     offset = data.offset;
   } while (offset);
   return records;
+}
+
+async function proxyPost(table, body) {
+  const res = await fetch(`${PROXY}?table=${encodeURIComponent(table)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Proxy error: ${res.status}`);
+  }
+  return res.json();
+}
+
+async function proxyPatch(table, recordId, body) {
+  const res = await fetch(`${PROXY}?table=${encodeURIComponent(table)}&recordId=${recordId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Proxy error: ${res.status}`);
+  }
+  return res.json();
 }
 
 // ─── CLIENTS ───
@@ -43,22 +69,16 @@ export async function getClients() {
 }
 
 export async function createClient(data) {
-  const res = await fetch(`${BASE_URL}/Clients`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      fields: {
-        Name: data.name,
-        Email: data.email,
-        Couleur: data.color,
-        "Login portail": data.loginPortail,
-        "Mot de passe": data.motDePasse,
-        "Réseaux actifs": data.reseaux,
-      },
-    }),
+  return proxyPost("Clients", {
+    fields: {
+      Name: data.name,
+      Email: data.email,
+      Couleur: data.color,
+      "Login portail": data.loginPortail,
+      "Mot de passe": data.motDePasse,
+      "Réseaux actifs": data.reseaux,
+    },
   });
-  if (!res.ok) throw new Error(`Airtable error: ${res.status}`);
-  return res.json();
 }
 
 // ─── POSTS ───
@@ -84,33 +104,21 @@ export async function getPosts() {
 export async function updatePostStatus(airtableId, status, comment = "") {
   const fields = { Statut: mapStatusToAirtable(status) };
   if (comment) fields["Commentaire client"] = comment;
-  const res = await fetch(`${BASE_URL}/Posts/${airtableId}`, {
-    method: "PATCH",
-    headers,
-    body: JSON.stringify({ fields }),
-  });
-  if (!res.ok) throw new Error(`Airtable error: ${res.status}`);
-  return res.json();
+  return proxyPatch("Posts", airtableId, { fields });
 }
 
 export async function createPost(data) {
-  const res = await fetch(`${BASE_URL}/Posts`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      fields: {
-        Caption: data.caption,
-        Client: [data.clientId],
-        Réseau: capitalize(data.network),
-        "Date publication": data.date,
-        Statut: mapStatusToAirtable(data.status || "draft"),
-        "Visuel URL": data.img || "",
-        "Heures attente": data.hours || 0,
-      },
-    }),
+  return proxyPost("Posts", {
+    fields: {
+      Caption: data.caption,
+      Client: [data.clientId],
+      Réseau: capitalize(data.network),
+      "Date publication": data.date,
+      Statut: mapStatusToAirtable(data.status || "draft"),
+      "Visuel URL": data.img || "",
+      "Heures attente": data.hours || 0,
+    },
   });
-  if (!res.ok) throw new Error(`Airtable error: ${res.status}`);
-  return res.json();
 }
 
 // ─── FACTURES ───
