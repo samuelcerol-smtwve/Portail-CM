@@ -299,7 +299,58 @@ function StatCard({ label, value, accent, sub }) {
 }
 
 // ─── POST CARD ───
-function PostCard({ post, client, onApprove, onApproveVisual, onRevision, isClient, onDelete }) {
+function EditPostForm({ post, onSave, onCancel }) {
+  const [caption, setCaption] = useState(post.caption || "");
+  const [date, setDate] = useState(post.date || "");
+  const [status, setStatus] = useState(post.status || "pending_text");
+  const [contentType, setContentType] = useState(post.contentType || "image");
+  const [img, setImg] = useState(post.img || "");
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Type de contenu</label>
+        <div style={{ display: "flex", gap: 6 }}>
+          {Object.entries(CONTENT_TYPES).map(([k, v]) => (
+            <button key={k} onClick={() => setContentType(k)} style={{ flex: 1, padding: "7px 0", borderRadius: 10, border: `1.5px solid ${contentType === k ? C.accent : C.border}`, backgroundColor: contentType === k ? C.accentSoft : "transparent", color: contentType === k ? C.accent : C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              {v.icon} {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Caption</label>
+        <textarea value={caption} onChange={e => setCaption(e.target.value)} rows={4} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", resize: "vertical", outline: "none" }} />
+      </div>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Date de publication</label>
+        <input value={date} onChange={e => setDate(e.target.value)} type="date" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit" }} />
+      </div>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Statut</label>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {["draft","pending_text","pending_visual","revision","approved"].map(s => (
+            <button key={s} onClick={() => setStatus(s)} style={{ padding: "6px 12px", borderRadius: 10, border: `1.5px solid ${status === s ? STATUSES[s].color : C.border}`, backgroundColor: status === s ? STATUSES[s].bg : "transparent", color: status === s ? STATUSES[s].color : C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              {STATUSES[s].label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>URL du visuel</label>
+        <input value={img} onChange={e => setImg(e.target.value)} placeholder="https://..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 12, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit" }} />
+      </div>
+      <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+        <button onClick={() => onSave({ caption, date, status, contentType, img })} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.tealDark})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+          💾 Enregistrer
+        </button>
+        <button onClick={onCancel} style={{ padding: "11px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
+      </div>
+    </div>
+  );
+}
+
+function PostCard({ post, client, onApprove, onApproveVisual, onRevision, isClient, onDelete, onEdit, onAddComment }) {
   const [showComment, setShowComment] = useState(false);
   const [comment, setComment] = useState("");
   const [imgLoaded, setImgLoaded] = useState(true);
@@ -341,33 +392,60 @@ function PostCard({ post, client, onApprove, onApproveVisual, onRevision, isClie
         {post.hours > 0 && (post.status === "pending" || post.status === "late") && (
           <div style={{ fontSize: 10, color: post.hours > 72 ? C.red : C.muted, marginTop: 4, fontWeight: post.hours > 72 ? 600 : 400 }}>⏱ {post.hours}h{post.hours > 48 && " — relancé"}</div>
         )}
-        {post.comments.length > 0 && (
-          <div style={{ marginTop: 8, padding: "6px 8px", borderRadius: 8, backgroundColor: C.bgLight, fontSize: 11, color: C.textSoft, border: `1px solid ${C.border}` }}>
-            <span style={{ fontWeight: 600, color: C.accent }}>💬</span> {post.comments[0].text}
-            <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{post.comments[0].date}</div>
+        {/* Fil de commentaires */}
+        {post.comments?.length > 0 && (
+          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 5 }}>
+            {post.comments.map((c, i) => (
+              <div key={i} style={{ padding: "6px 10px", borderRadius: 10, backgroundColor: c.author === "cm" ? "#EEF7FF" : C.bgLight, border: `1px solid ${c.author === "cm" ? C.accent + "30" : C.border}`, fontSize: 11, color: C.textSoft }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                  <span style={{ fontWeight: 700, fontSize: 10, color: c.author === "cm" ? C.accent : C.orange }}>
+                    {c.author === "cm" ? "👩‍💻 CM" : "👤 Client"}
+                  </span>
+                  <span style={{ fontSize: 9, color: C.muted }}>{c.date}</span>
+                </div>
+                {c.text}
+              </div>
+            ))}
           </div>
         )}
-        {canAct && (
-          <div style={{ marginTop: 10 }}>
+        {/* Zone message */}
+        {onAddComment && (
+          <div style={{ marginTop: 8 }}>
             {!showComment ? (
-              <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  onClick={() => isPhase2 ? onApproveVisual(post.id) : onApprove(post.id)}
-                  style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: isPhase2 ? "linear-gradient(135deg, #8B5CF6, #7C3AED)" : `linear-gradient(135deg, ${C.green}, ${C.green}cc)`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer" }}
-                  onMouseEnter={e => e.target.style.opacity = .85} onMouseLeave={e => e.target.style.opacity = 1}>
-                  {isPhase1 ? "✓ Valider le texte" : isPhase2 ? "✓ Valider le visuel" : "✓ Valider"}
-                </button>
-                <button onClick={() => setShowComment(true)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: `1.5px solid ${C.accent}`, backgroundColor: "transparent", color: C.accent, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>✏️ Modifier</button>
-              </div>
+              <button onClick={() => setShowComment(true)} style={{ width: "100%", padding: "6px 0", borderRadius: 8, border: `1px dashed ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer" }}>
+                💬 Ajouter un message
+              </button>
             ) : (
               <div>
-                <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Votre demande..." style={{ width: "100%", boxSizing: "border-box", padding: 8, borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: C.bgLight, color: C.text, fontSize: 11, resize: "vertical", minHeight: 50, fontFamily: "inherit", outline: "none" }} />
-                <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-                  <button onClick={() => { onRevision(post.id, comment); setShowComment(false); setComment(""); }} style={{ flex: 1, padding: "7px 0", borderRadius: 8, border: "none", backgroundColor: C.accent, color: "#fff", fontWeight: 600, fontSize: 11, cursor: "pointer" }}>Envoyer</button>
-                  <button onClick={() => setShowComment(false)} style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer" }}>Annuler</button>
+                <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder={isClient ? "Votre message à la CM..." : "Votre message au client..."} style={{ width: "100%", boxSizing: "border-box", padding: 8, borderRadius: 8, border: `1px solid ${C.accent}`, backgroundColor: C.bgLight, color: C.text, fontSize: 11, resize: "vertical", minHeight: 44, fontFamily: "inherit", outline: "none" }} autoFocus />
+                <div style={{ display: "flex", gap: 6, marginTop: 5 }}>
+                  <button onClick={() => { onAddComment(post.id, comment); setShowComment(false); setComment(""); }} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "none", backgroundColor: C.accent, color: "#fff", fontWeight: 600, fontSize: 11, cursor: "pointer" }}>Envoyer</button>
+                  <button onClick={() => { setShowComment(false); setComment(""); }} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer" }}>✕</button>
                 </div>
               </div>
             )}
+          </div>
+        )}
+        {/* Boutons validation client */}
+        {canAct && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                onClick={() => isPhase2 ? onApproveVisual(post.id) : onApprove(post.id)}
+                style={{ flex: 2, padding: "9px 0", borderRadius: 10, border: "none", background: isPhase2 ? "linear-gradient(135deg, #8B5CF6, #7C3AED)" : `linear-gradient(135deg, ${C.green}, ${C.green}cc)`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer" }}
+                onMouseEnter={e => e.target.style.opacity = .85} onMouseLeave={e => e.target.style.opacity = 1}>
+                {isPhase1 ? "✓ Valider le texte" : isPhase2 ? "✓ Valider le visuel" : "✓ Valider"}
+              </button>
+              <button onClick={() => { setShowComment(true); }} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: `1.5px solid ${C.orange}`, backgroundColor: "transparent", color: C.orange, fontWeight: 600, fontSize: 11, cursor: "pointer" }}>✏️ Modif</button>
+            </div>
+          </div>
+        )}
+        {/* Bouton édition CM */}
+        {onEdit && (
+          <div style={{ marginTop: 8 }}>
+            <button onClick={() => onEdit(post.id)} style={{ width: "100%", padding: "7px 0", borderRadius: 10, border: `1.5px solid ${C.accent}`, backgroundColor: "transparent", color: C.accent, fontWeight: 600, fontSize: 11, cursor: "pointer" }}>
+              ✏️ Modifier ce post
+            </button>
           </div>
         )}
       </div>
@@ -530,6 +608,7 @@ export default function App() {
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmDeletePost, setConfirmDeletePost] = useState(null);
+  const [editPostId, setEditPostId] = useState(null);
   const [authUser, setAuthUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true); // clientId à supprimer
 
@@ -627,8 +706,19 @@ export default function App() {
     if (post?.airtableId && airtableReady) {
       await updatePostStatus(post.airtableId, "revision", c || "Modification demandée").catch(console.error);
     }
-    setPosts(p => p.map(x => x.id === id ? { ...x, status: "revision", comments: [{ author: "client", text: c || "Modification demandée", date: "à l'instant" }] } : x));
+    setPosts(p => p.map(x => x.id === id ? { ...x, status: "revision", comments: [...(x.comments||[]), { author: "client", text: c || "Modification demandée", date: "à l'instant" }] } : x));
     fire("✏️ Demande envoyée", "rev");
+  };
+
+  const addComment = (id, text, author) => {
+    if (!text?.trim()) return;
+    setPosts(p => p.map(x => x.id === id ? { ...x, comments: [...(x.comments||[]), { author, text, date: "à l'instant" }] } : x));
+    fire(author === "cm" ? "💬 Message envoyé au client" : "💬 Message envoyé à la CM");
+  };
+
+  const updatePost = (id, fields) => {
+    setPosts(p => p.map(x => x.id === id ? { ...x, ...fields } : x));
+    fire("✅ Post modifié");
   };
 
   const handleDeleteClient = async () => {
@@ -948,10 +1038,43 @@ export default function App() {
               </div>
               <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{selClient ? clients.find(c => c.id === selClient)?.name : "Tous"} — Mars 2026</p>
               {isClient && <div style={{ padding: "10px 14px", borderRadius: 12, marginBottom: 16, backgroundColor: C.accentSoft, border: `1px solid ${C.accent}25`, fontSize: 12, color: C.textSoft }}>💡 <strong style={{ color: C.accent }}>Validez</strong> ou <strong style={{ color: C.accent }}>demandez une modification</strong>. Notification instantanée.</div>}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
-                {visible.sort((a, b) => a.day - b.day).map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={isClient} onApprove={approve} onApproveVisual={approveVisual} onRevision={revise} onDelete={!isClient ? () => setConfirmDeletePost(p.id) : null} />)}
-              </div>
-              {visible.length === 0 && <div style={{ textAlign: "center", padding: 50, color: C.muted }}><div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>Aucun post</div>}
+              {isClient ? (() => {
+                const ORDER = ["late","pending_text","pending_visual","pending","revision","approved","published","draft"];
+                const SECTIONS = [
+                  { key: "urgent", label: "🔴 À traiter en urgence", statuses: ["late"], color: C.red },
+                  { key: "validate", label: "🟡 En attente de ta validation", statuses: ["pending_text","pending_visual","pending"], color: "#F59E0B" },
+                  { key: "revision", label: "🟠 Modifications demandées", statuses: ["revision"], color: C.orange },
+                  { key: "approved", label: "✅ Validés ce mois-ci", statuses: ["approved","published"], color: C.green },
+                  { key: "draft", label: "📝 Brouillons", statuses: ["draft"], color: C.muted },
+                ];
+                return (
+                  <div>
+                    {SECTIONS.map(sec => {
+                      const secPosts = visible.filter(p => sec.statuses.includes(p.status)).sort((a,b) => a.day - b.day);
+                      if (secPosts.length === 0) return null;
+                      return (
+                        <div key={sec.key} style={{ marginBottom: 28 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: sec.color }}>{sec.label}</span>
+                            <span style={{ backgroundColor: sec.color + "20", color: sec.color, borderRadius: 20, fontSize: 11, fontWeight: 700, padding: "1px 8px" }}>{secPosts.length}</span>
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
+                            {secPosts.map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={isClient} onApprove={approve} onApproveVisual={approveVisual} onRevision={revise} onDelete={null} onAddComment={(id, text) => addComment(id, text, "client")} />)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {visible.length === 0 && <div style={{ textAlign: "center", padding: 50, color: C.muted }}><div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>Aucun post</div>}
+                  </div>
+                );
+              })() : (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
+                    {visible.sort((a, b) => a.day - b.day).map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={isClient} onApprove={approve} onApproveVisual={approveVisual} onRevision={revise} onDelete={!isClient ? () => setConfirmDeletePost(p.id) : null} onEdit={!isClient ? (id) => setEditPostId(id) : null} onAddComment={(id, text) => addComment(id, text, "cm")} />)}
+                  </div>
+                  {visible.length === 0 && <div style={{ textAlign: "center", padding: 50, color: C.muted }}><div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>Aucun post</div>}
+                </>
+              )}
             </div>
           )}
 
@@ -1491,6 +1614,23 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* MODAL EDIT POST CM */}
+      {editPostId && (() => {
+        const ep = posts.find(p => p.id === editPostId);
+        if (!ep) return null;
+        return (
+          <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.45)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <div style={{ backgroundColor: C.card, borderRadius: 20, padding: 24, width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: 0 }}>✏️ Modifier le post</h3>
+                <button onClick={() => setEditPostId(null)} style={{ border: "none", background: "none", fontSize: 18, cursor: "pointer", color: C.muted }}>✕</button>
+              </div>
+              <EditPostForm post={ep} onSave={(fields) => { updatePost(ep.id, fields); setEditPostId(null); }} onCancel={() => setEditPostId(null)} />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* TOAST */}
       {toast && (
