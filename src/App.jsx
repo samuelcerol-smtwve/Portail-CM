@@ -56,11 +56,20 @@ const CLIENTS = [
 
 const STATUSES = {
   draft: { label: "Brouillon", color: C.muted, bg: "#3D365A44" },
+  pending_text: { label: "Validation texte", color: "#F59E0B", bg: "#F59E0B14" },
+  pending_visual: { label: "Validation visuel", color: "#8B5CF6", bg: "#8B5CF614" },
   pending: { label: "En attente", color: C.gold, bg: C.goldSoft },
   revision: { label: "Modif demandée", color: C.orange, bg: C.orangeSoft },
-  approved: { label: "Validé", color: C.green, bg: C.greenSoft },
+  approved: { label: "Validé ✓", color: C.green, bg: C.greenSoft },
   late: { label: "En retard", color: C.red, bg: C.redSoft },
   published: { label: "Publié", color: C.blue, bg: C.blueSoft },
+};
+
+const CONTENT_TYPES = {
+  image: { label: "Image", icon: "🖼️" },
+  video: { label: "Vidéo", icon: "🎬" },
+  reel: { label: "Réel", icon: "📹" },
+  story: { label: "Story", icon: "📱" },
 };
 
 const NETWORKS = {
@@ -290,26 +299,43 @@ function StatCard({ label, value, accent, sub }) {
 }
 
 // ─── POST CARD ───
-function PostCard({ post, client, onApprove, onRevision, isClient, onDelete }) {
+function PostCard({ post, client, onApprove, onApproveVisual, onRevision, isClient, onDelete }) {
   const [showComment, setShowComment] = useState(false);
   const [comment, setComment] = useState("");
   const [imgLoaded, setImgLoaded] = useState(true);
-  const canAct = isClient && (post.status === "pending" || post.status === "late");
+  const canAct = isClient && ["pending", "pending_text", "pending_visual", "late"].includes(post.status);
+  const typeInfo = post.contentType ? CONTENT_TYPES[post.contentType] : null;
+  const isPhase1 = post.status === "pending_text";
+  const isPhase2 = post.status === "pending_visual";
+  const borderColor = post.status === "late" ? C.red + "50" : isPhase1 ? "#F59E0B50" : isPhase2 ? "#8B5CF650" : C.border;
 
   return (
-    <div style={{ backgroundColor: C.card, borderRadius: 16, overflow: "hidden", border: `1px solid ${post.status === "late" ? C.red + "40" : C.border}`, transition: "all 0.25s", position: "relative" }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.06)"; e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = C.borderLight; if(onDelete) e.currentTarget.querySelector(".post-del")?.style && (e.currentTarget.querySelector(".post-del").style.opacity = "1"); }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = post.status === "late" ? C.red + "40" : C.border; if(onDelete) e.currentTarget.querySelector(".post-del")?.style && (e.currentTarget.querySelector(".post-del").style.opacity = "0"); }}>
+    <div style={{ backgroundColor: C.card, borderRadius: 16, overflow: "hidden", border: `1.5px solid ${borderColor}`, transition: "all 0.25s", position: "relative" }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.06)"; e.currentTarget.style.transform = "translateY(-3px)"; if(onDelete) e.currentTarget.querySelector(".post-del")?.style && (e.currentTarget.querySelector(".post-del").style.opacity = "1"); }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; if(onDelete) e.currentTarget.querySelector(".post-del")?.style && (e.currentTarget.querySelector(".post-del").style.opacity = "0"); }}>
+      {(isPhase1 || isPhase2) && <div style={{ height: 3, background: isPhase1 ? "linear-gradient(90deg, #F59E0B, #FBBF24)" : "linear-gradient(90deg, #8B5CF6, #A78BFA)" }} />}
       {onDelete && <button className="post-del" onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: "absolute", top: 8, right: 8, opacity: 0, border: "none", borderRadius: 8, backgroundColor: "rgba(0,0,0,.5)", color: "#fff", fontSize: 13, padding: "4px 8px", cursor: "pointer", transition: "opacity .15s", zIndex: 2 }}>🗑</button>}
-      {imgLoaded && <img src={post.img} alt="" style={{ width: "100%", height: 175, objectFit: "cover", display: "block" }} onError={() => setImgLoaded(false)} />}
+      {imgLoaded && post.img && !isPhase1 && <img src={post.img} alt="" style={{ width: "100%", height: 175, objectFit: "cover", display: "block" }} onError={() => setImgLoaded(false)} />}
+      {isPhase1 && (
+        <div style={{ width: "100%", height: 72, background: "linear-gradient(135deg, #FEF3C7, #FDE68A)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <span style={{ fontSize: 18 }}>📸</span>
+          <span style={{ fontSize: 11, color: "#92400E", fontWeight: 600 }}>Visuel en cours de réalisation</span>
+        </div>
+      )}
       <div style={{ padding: "12px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <NetIcon network={post.network} size={12} />
+            {typeInfo && <span style={{ fontSize: 10, color: C.muted, backgroundColor: C.bgLight, border: `1px solid ${C.border}`, borderRadius: 6, padding: "1px 6px", fontWeight: 600 }}>{typeInfo.icon} {typeInfo.label}</span>}
             {!isClient && client && <><span style={{ color: C.border }}>·</span><Avatar client={client} size={18} /><span style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{client.name}</span></>}
           </div>
           <Badge status={post.status} small />
         </div>
+        {(isPhase1 || isPhase2) && (
+          <div style={{ marginBottom: 8, padding: "5px 10px", borderRadius: 8, backgroundColor: isPhase1 ? "#FEF3C720" : "#EDE9FE20", border: `1px solid ${isPhase1 ? "#F59E0B30" : "#8B5CF630"}`, fontSize: 10, color: isPhase1 ? "#D97706" : "#7C3AED", fontWeight: 600 }}>
+            {isPhase1 ? "📝 Phase 1 — Validation du texte" : "🖼️ Phase 2 — Validation du visuel"}
+          </div>
+        )}
         <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>📅 {post.day} mars</div>
         <p style={{ fontSize: 12, color: C.textSoft, lineHeight: 1.55, margin: "0 0 6px", whiteSpace: "pre-wrap", maxHeight: 60, overflow: "hidden" }}>{post.caption}</p>
         {post.hours > 0 && (post.status === "pending" || post.status === "late") && (
@@ -325,8 +351,12 @@ function PostCard({ post, client, onApprove, onRevision, isClient, onDelete }) {
           <div style={{ marginTop: 10 }}>
             {!showComment ? (
               <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => onApprove(post.id)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.green}, ${C.green}cc)`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer", transition: "opacity .15s" }}
-                  onMouseEnter={e => e.target.style.opacity = .85} onMouseLeave={e => e.target.style.opacity = 1}>✓ Valider</button>
+                <button
+                  onClick={() => isPhase2 ? onApproveVisual(post.id) : onApprove(post.id)}
+                  style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: isPhase2 ? "linear-gradient(135deg, #8B5CF6, #7C3AED)" : `linear-gradient(135deg, ${C.green}, ${C.green}cc)`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer" }}
+                  onMouseEnter={e => e.target.style.opacity = .85} onMouseLeave={e => e.target.style.opacity = 1}>
+                  {isPhase1 ? "✓ Valider le texte" : isPhase2 ? "✓ Valider le visuel" : "✓ Valider"}
+                </button>
                 <button onClick={() => setShowComment(true)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: `1.5px solid ${C.accent}`, backgroundColor: "transparent", color: C.accent, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>✏️ Modifier</button>
               </div>
             ) : (
@@ -494,7 +524,7 @@ export default function App() {
   const [showNewClient, setShowNewClient] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
   const [newClient, setNewClient] = useState({ name: "", email: "", color: "#2A8FA8", reseaux: [] });
-  const [newPost, setNewPost] = useState({ caption: "", network: "instagram", date: "", status: "pending", img: "" });
+  const [newPost, setNewPost] = useState({ caption: "", network: "instagram", date: "", status: "pending_text", img: "", contentType: "image" });
   const [imgPreview, setImgPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -572,11 +602,24 @@ export default function App() {
 
   const approve = async (id) => {
     const post = posts.find(p => p.id === id);
+    if (!post) return;
+    const nextStatus = post.status === "pending_text" ? "pending_visual" : "approved";
+    const msg = nextStatus === "pending_visual" ? "✓ Texte validé — en attente du visuel" : "Validé ✓";
     if (post?.airtableId && airtableReady) {
-      await updatePostStatus(post.airtableId, "approved", "Validé ✓").catch(console.error);
+      await updatePostStatus(post.airtableId, nextStatus, msg).catch(console.error);
     }
-    setPosts(p => p.map(x => x.id === id ? { ...x, status: "approved", comments: [{ author: "client", text: "Validé ✓", date: "à l'instant" }] } : x));
-    fire("✅ Post validé — CM notifiée");
+    setPosts(p => p.map(x => x.id === id ? { ...x, status: nextStatus, comments: [{ author: "client", text: msg, date: "à l'instant" }] } : x));
+    fire(nextStatus === "pending_visual" ? "✓ Texte validé ! La CM va ajouter le visuel" : "✅ Post entièrement validé !");
+  };
+
+  const approveVisual = async (id) => {
+    const post = posts.find(p => p.id === id);
+    if (!post) return;
+    if (post?.airtableId && airtableReady) {
+      await updatePostStatus(post.airtableId, "approved", "Visuel validé ✓").catch(console.error);
+    }
+    setPosts(p => p.map(x => x.id === id ? { ...x, status: "approved", comments: [{ author: "client", text: "Visuel validé ✓", date: "à l'instant" }] } : x));
+    fire("✅ Visuel validé — post prêt à publier !");
   };
 
   const revise = async (id, c) => {
@@ -906,7 +949,7 @@ export default function App() {
               <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{selClient ? clients.find(c => c.id === selClient)?.name : "Tous"} — Mars 2026</p>
               {isClient && <div style={{ padding: "10px 14px", borderRadius: 12, marginBottom: 16, backgroundColor: C.accentSoft, border: `1px solid ${C.accent}25`, fontSize: 12, color: C.textSoft }}>💡 <strong style={{ color: C.accent }}>Validez</strong> ou <strong style={{ color: C.accent }}>demandez une modification</strong>. Notification instantanée.</div>}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
-                {visible.sort((a, b) => a.day - b.day).map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={isClient} onApprove={approve} onRevision={revise} onDelete={!isClient ? () => setConfirmDeletePost(p.id) : null} />)}
+                {visible.sort((a, b) => a.day - b.day).map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={isClient} onApprove={approve} onApproveVisual={approveVisual} onRevision={revise} onDelete={!isClient ? () => setConfirmDeletePost(p.id) : null} />)}
               </div>
               {visible.length === 0 && <div style={{ textAlign: "center", padding: 50, color: C.muted }}><div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>Aucun post</div>}
             </div>
@@ -1403,6 +1446,16 @@ export default function App() {
                 </div>
               </div>
               <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Type de contenu</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {Object.entries(CONTENT_TYPES).map(([k, v]) => (
+                    <button key={k} onClick={() => setNewPost(p => ({...p, contentType: k}))} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: `1.5px solid ${newPost.contentType === k ? C.accent : C.border}`, backgroundColor: newPost.contentType === k ? C.accentSoft : "transparent", color: newPost.contentType === k ? C.accent : C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                      {v.icon} {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Date de publication</label>
                 <input value={newPost.date} onChange={e => setNewPost(p => ({...p, date: e.target.value}))} type="date" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit" }} />
               </div>
@@ -1421,7 +1474,7 @@ export default function App() {
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Statut initial</label>
                 <div style={{ display: "flex", gap: 8 }}>
-                  {["draft","pending"].map(s => (
+                  {["draft","pending_text","pending_visual"].map(s => (
                     <button key={s} onClick={() => setNewPost(p => ({...p, status: s}))} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: `1.5px solid ${newPost.status === s ? STATUSES[s].color : C.border}`, backgroundColor: newPost.status === s ? STATUSES[s].bg : "transparent", color: newPost.status === s ? STATUSES[s].color : C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
                       {STATUSES[s].label}
                     </button>
