@@ -710,7 +710,7 @@ export default function App() {
         <FloralCorner style={{ width: 140, top: -25, right: 50 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
           <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2A8FA8", boxShadow: `0 0 12px ${C.accentGlow}` }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#0A2E3F", letterSpacing: -0.5 }}>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#E0F8FF", letterSpacing: -0.5 }}>
             {isClient ? "Mon espace" : "petit bout de com"}
           </span>
           {isClient && selClient && <span style={{ fontSize: 12, color: "#4A9BB0", fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
@@ -781,7 +781,7 @@ export default function App() {
         </div>
 
         {/* ─── MAIN ─── */}
-        <div style={{ flex: 1, padding: 22, overflowY: "auto", maxHeight: "calc(100vh - 58px)", backgroundImage: "url(https://ggoqdgddsppxrrszqrkm.supabase.co/storage/v1/object/public/post-images/bg-portail.png)", backgroundSize: "55%", backgroundPosition: "bottom right", backgroundRepeat: "no-repeat" }}>
+        <div style={{ flex: 1, padding: 22, overflowY: "auto", maxHeight: "calc(100vh - 58px)", backgroundImage: "url(https://ggoqdgddsppxrrszqrkm.supabase.co/storage/v1/object/public/post-images/bg-portail.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }}>
 
           {/* DASHBOARD */}
           {tab === "dashboard" && !isClient && (
