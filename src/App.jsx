@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost, deleteClient } from "./airtable.js";
+import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost, deleteClient, deletePost } from "./airtable.js";
 
 // ─── PALETTE (Garden-inspired: dark bg, warm coral/pink accents, organic feel) ───
 const C = {
@@ -275,7 +275,7 @@ function StatCard({ label, value, accent, sub }) {
 }
 
 // ─── POST CARD ───
-function PostCard({ post, client, onApprove, onRevision, isClient }) {
+function PostCard({ post, client, onApprove, onRevision, isClient, onDelete }) {
   const [showComment, setShowComment] = useState(false);
   const [comment, setComment] = useState("");
   const [imgLoaded, setImgLoaded] = useState(true);
@@ -283,8 +283,9 @@ function PostCard({ post, client, onApprove, onRevision, isClient }) {
 
   return (
     <div style={{ backgroundColor: C.card, borderRadius: 16, overflow: "hidden", border: `1px solid ${post.status === "late" ? C.red + "40" : C.border}`, transition: "all 0.25s", position: "relative" }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.06)"; e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = C.borderLight; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = post.status === "late" ? C.red + "40" : C.border; }}>
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.06)"; e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = C.borderLight; if(onDelete) e.currentTarget.querySelector(".post-del")?.style && (e.currentTarget.querySelector(".post-del").style.opacity = "1"); }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = post.status === "late" ? C.red + "40" : C.border; if(onDelete) e.currentTarget.querySelector(".post-del")?.style && (e.currentTarget.querySelector(".post-del").style.opacity = "0"); }}>
+      {onDelete && <button className="post-del" onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: "absolute", top: 8, right: 8, opacity: 0, border: "none", borderRadius: 8, backgroundColor: "rgba(0,0,0,.5)", color: "#fff", fontSize: 13, padding: "4px 8px", cursor: "pointer", transition: "opacity .15s", zIndex: 2 }}>🗑</button>}
       {imgLoaded && <img src={post.img} alt="" style={{ width: "100%", height: 175, objectFit: "cover", display: "block" }} onError={() => setImgLoaded(false)} />}
       <div style={{ padding: "12px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -431,7 +432,8 @@ export default function App() {
   const [newClient, setNewClient] = useState({ name: "", email: "", color: "#A78BFA", reseaux: [] });
   const [newPost, setNewPost] = useState({ caption: "", network: "instagram", date: "", status: "pending", img: "" });
   const [saving, setSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null); // clientId à supprimer
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmDeletePost, setConfirmDeletePost] = useState(null); // clientId à supprimer
 
   // ─── CHARGER LES DONNÉES AIRTABLE (via proxy /api/airtable) ───
   useEffect(() => {
@@ -492,6 +494,18 @@ export default function App() {
       if (selClient === confirmDelete) setSelClient(null);
       setConfirmDelete(null);
       fire("🗑 Client supprimé");
+    } catch(e) { console.error(e); fire("❌ Erreur suppression", "err"); }
+    setSaving(false);
+  };
+
+  const handleDeletePost = async () => {
+    if (!confirmDeletePost) return;
+    setSaving(true);
+    try {
+      await deletePost(confirmDeletePost);
+      setPosts(p => p.filter(x => x.id !== confirmDeletePost));
+      setConfirmDeletePost(null);
+      fire("🗑 Post supprimé");
     } catch(e) { console.error(e); fire("❌ Erreur suppression", "err"); }
     setSaving(false);
   };
@@ -706,7 +720,7 @@ export default function App() {
               <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{selClient ? clients.find(c => c.id === selClient)?.name : "Tous"} — Mars 2026</p>
               {isClient && <div style={{ padding: "10px 14px", borderRadius: 12, marginBottom: 16, backgroundColor: C.accentSoft, border: `1px solid ${C.accent}25`, fontSize: 12, color: C.textSoft }}>💡 <strong style={{ color: C.accent }}>Validez</strong> ou <strong style={{ color: C.accent }}>demandez une modification</strong>. Notification instantanée.</div>}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
-                {visible.sort((a, b) => a.day - b.day).map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={isClient} onApprove={approve} onRevision={revise} />)}
+                {visible.sort((a, b) => a.day - b.day).map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={isClient} onApprove={approve} onRevision={revise} onDelete={!isClient ? () => setConfirmDeletePost(p.id) : null} />)}
               </div>
               {visible.length === 0 && <div style={{ textAlign: "center", padding: 50, color: C.muted }}><div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>Aucun post</div>}
             </div>
@@ -1103,6 +1117,25 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {/* MODAL CONFIRMATION SUPPRESSION POST */}
+      {confirmDeletePost && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, animation: "fadeIn .2s ease" }}>
+          <div style={{ backgroundColor: C.card, borderRadius: 20, padding: 28, width: 360, boxShadow: "0 20px 60px rgba(0,0,0,.15)", textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🗑</div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Supprimer ce post ?</h3>
+            <p style={{ fontSize: 12, color: C.muted, marginBottom: 24, lineHeight: 1.6 }}>
+              Cette action est irréversible.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmDeletePost(null)} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
+              <button onClick={handleDeletePost} disabled={saving} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", backgroundColor: C.red, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer" }}>
+                {saving ? "Suppression..." : "Supprimer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CONFIRMATION SUPPRESSION */}
       {confirmDelete && (

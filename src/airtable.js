@@ -115,6 +115,17 @@ export async function getPosts() {
   }));
 }
 
+export async function deletePost(recordId) {
+  const res = await fetch(`${PROXY}?table=${encodeURIComponent("Posts")}&recordId=${recordId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Proxy error: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function updatePostStatus(airtableId, status, comment = "") {
   const fields = { Statut: mapStatusToAirtable(status) };
   if (comment) fields["Commentaire client"] = comment;
