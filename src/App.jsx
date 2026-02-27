@@ -432,8 +432,8 @@ export default function App() {
     setLoading(true);
     Promise.all([getClients(), getPosts(), getFactures(), getStrategies()])
       .then(([cls, psts, facts, strats]) => {
-        if (cls.length > 0) setClients(cls);
-        if (psts.length > 0) setPosts(psts);
+        setClients(cls);
+        setPosts(psts);
 
         // Factures par clientId
         if (facts.length > 0) {
