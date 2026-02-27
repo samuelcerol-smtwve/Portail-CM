@@ -1,6 +1,20 @@
 import { useState, useEffect, useMemo } from "react";
 import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost, deleteClient, deletePost } from "./airtable.js";
-import { signIn, signOut, getSession, supabase, uploadImage } from "./supabase.js";
+import { signIn, signOut, getSession, supabase } from "./supabase.js";
+
+// ─── UPLOAD IMAGE (Supabase Storage) ───
+async function uploadImage(file) {
+  const ext = file.name.split(".").pop();
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { data, error } = await supabase.storage
+    .from("post-images")
+    .upload(fileName, file, { cacheControl: "3600", upsert: false });
+  if (error) throw error;
+  const { data: { publicUrl } } = supabase.storage
+    .from("post-images")
+    .getPublicUrl(data.path);
+  return publicUrl;
+}
 
 // ─── PALETTE (Garden-inspired: dark bg, warm coral/pink accents, organic feel) ───
 const C = {
