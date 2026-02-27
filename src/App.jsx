@@ -710,7 +710,7 @@ export default function App() {
         <FloralCorner style={{ width: 140, top: -25, right: 50 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
           <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2A8FA8", boxShadow: `0 0 12px ${C.accentGlow}` }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#E0F8FF", letterSpacing: -0.5 }}>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#0A2E3F", letterSpacing: -0.5 }}>
             {isClient ? "Mon espace" : "petit bout de com"}
           </span>
           {isClient && selClient && <span style={{ fontSize: 12, color: "#4A9BB0", fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
@@ -781,25 +781,12 @@ export default function App() {
         </div>
 
         {/* ─── MAIN ─── */}
-        <div style={{ flex: 1, padding: 22, overflowY: "auto", maxHeight: "calc(100vh - 58px)" }}>
+        <div style={{ flex: 1, padding: 22, overflowY: "auto", maxHeight: "calc(100vh - 58px)", backgroundImage: "url(https://ggoqdgddsppxrrszqrkm.supabase.co/storage/v1/object/public/post-images/bg-portail.png)", backgroundSize: "55%", backgroundPosition: "bottom right", backgroundRepeat: "no-repeat" }}>
 
           {/* DASHBOARD */}
           {tab === "dashboard" && !isClient && (
             <div style={{ animation: "fadeIn .3s ease" }}>
-              <div style={{ marginBottom: 28 }}>
-                <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 6, letterSpacing: -0.5 }}>
-                  Bonjour Elsa 👋
-                </h2>
-                <p style={{ fontSize: 15, color: C.textSoft, marginBottom: 4, fontWeight: 500 }}>
-                  Bienvenue dans ton espace de gestion.
-                </p>
-                <p style={{ fontSize: 13, color: C.muted }}>
-                  {stats.pending > 0
-                    ? <>Tu as <strong style={{ color: C.orange, fontWeight: 700 }}>{stats.pending} post{stats.pending > 1 ? "s" : ""} en attente</strong> de validation aujourd'hui{stats.late > 0 ? <> et <strong style={{ color: C.red, fontWeight: 700 }}>{stats.late} en retard</strong></> : " 🎉"}</>
-                    : <>Tout est à jour, aucun post en attente aujourd'hui <span style={{ color: C.green }}>✓</span></>
-                  }
-                </p>
-              </div>
+              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 18 }}>Bonjour 👋</h2>
               <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
                 <StatCard label="Total" value={stats.total} sub="ce mois" />
                 <StatCard label="En attente" value={stats.pending} accent={C.gold} sub="validation" />
