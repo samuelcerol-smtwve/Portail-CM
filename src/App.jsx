@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { getClients, getPosts, getFactures, getStrategies, updatePostStatus } from "./airtable.js";
+import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost } from "./airtable.js";
 
 // ─── PALETTE (Garden-inspired: dark bg, warm coral/pink accents, organic feel) ───
 const C = {
@@ -487,10 +487,10 @@ export default function App() {
     if (!newClient.name.trim()) return;
     setSaving(true);
     try {
-      const res = await import("./airtable.js").then(m => m.createClient({
+      const res = await createClient({
         name: newClient.name, email: newClient.email, color: newClient.color,
         reseaux: newClient.reseaux, loginPortail: newClient.email, motDePasse: "client123"
-      }));
+      });
       const created = {
         id: res.id, airtableId: res.id, name: newClient.name, email: newClient.email,
         color: newClient.color, reseaux: newClient.reseaux,
@@ -500,7 +500,7 @@ export default function App() {
       setShowNewClient(false);
       setNewClient({ name: "", email: "", color: "#A78BFA", reseaux: [] });
       fire("✅ Client créé !");
-    } catch(e) { fire("❌ Erreur création client", "err"); }
+    } catch(e) { console.error(e); fire("❌ Erreur création client", "err"); }
     setSaving(false);
   };
 
@@ -508,10 +508,10 @@ export default function App() {
     if (!newPost.caption.trim() || !selClient) return;
     setSaving(true);
     try {
-      const res = await import("./airtable.js").then(m => m.createPost({
+      const res = await createPost({
         caption: newPost.caption, clientId: selClient, network: newPost.network,
         date: newPost.date, status: newPost.status, img: newPost.img,
-      }));
+      });
       const created = {
         id: res.id, airtableId: res.id, clientId: selClient,
         network: newPost.network, status: newPost.status,
@@ -522,7 +522,7 @@ export default function App() {
       setShowNewPost(false);
       setNewPost({ caption: "", network: "instagram", date: "", status: "pending", img: "" });
       fire("✅ Post créé !");
-    } catch(e) { fire("❌ Erreur création post", "err"); }
+    } catch(e) { console.error(e); fire("❌ Erreur création post", "err"); }
     setSaving(false);
   };
   const filtered = posts.filter(p => selClient ? p.clientId === selClient : true);
