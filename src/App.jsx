@@ -504,9 +504,16 @@ export default function App() {
     setAuthUser(user);
     setViewMode("client");
     setTab("calendar");
-    // Trouver le client correspondant à cet email
-    const match = clients.find(c => c.email === email || c.loginPortail === email);
-    if (match) setSelClient(match.id);
+    // Trouver le client correspondant à cet email (après chargement Airtable)
+    const allClients = await getClients();
+    const match = allClients.find(c =>
+      c.email?.toLowerCase() === email.toLowerCase() ||
+      c.loginPortail?.toLowerCase() === email.toLowerCase()
+    );
+    if (match) {
+      setClients(prev => prev.some(c => c.id === match.id) ? prev : [...prev, match]);
+      setSelClient(match.id);
+    }
   };
 
   const handleLogout = async () => {
@@ -635,6 +642,7 @@ export default function App() {
     } catch(e) { console.error(e); fire("❌ Erreur création post", "err"); }
     setSaving(false);
   };
+  const isClient = viewMode === "client";
   const filtered = posts.filter(p => selClient ? p.clientId === selClient : true);
   const visible = isClient ? filtered.filter(p => p.status !== "draft") : filtered;
   const stats = { total: posts.length, pending: posts.filter(p => p.status === "pending").length, late: posts.filter(p => p.status === "late").length, approved: posts.filter(p => p.status === "approved").length, revision: posts.filter(p => p.status === "revision").length };
@@ -709,16 +717,29 @@ export default function App() {
             {!isClient && <button onClick={() => setShowNewClient(true)} style={{ fontSize: 16, lineHeight: 1, border: "none", background: "none", color: C.accent, cursor: "pointer", fontWeight: 700, padding: "0 2px" }} title="Nouveau client">+</button>}
           </div>
           {!isClient && <button onClick={() => setSelClient(null)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: !selClient ? C.card : "transparent", color: C.text, fontWeight: !selClient ? 600 : 400, borderRadius: 6 }}>Tous</button>}
-          {clients.map(c => (
-            <div key={c.id} style={{ display: "flex", alignItems: "center", paddingRight: 8 }}
-              onMouseEnter={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "1"; }}
-              onMouseLeave={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "0"; }}>
-              <button onClick={() => setSelClient(c.id)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: selClient === c.id ? C.card : "transparent", color: C.text, fontWeight: selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
-                <Avatar client={c} size={22} /> {c.name}
-              </button>
-              <button className="del-btn" onClick={() => setConfirmDelete(c.id)} style={{ opacity: 0, border: "none", background: "none", cursor: "pointer", fontSize: 13, color: C.red, padding: "4px 6px", borderRadius: 6, transition: "opacity .15s", flexShrink: 0 }} title="Supprimer">🗑</button>
-            </div>
-          ))}
+          {/* En mode client connecté, afficher uniquement son compte */}
+          {isClient && authUser ? (
+            selClient && (() => {
+              const c = clients.find(x => x.id === selClient);
+              return c ? (
+                <div style={{ padding: "7px 18px", display: "flex", alignItems: "center", gap: 8 }}>
+                  <Avatar client={c} size={22} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{c.name}</span>
+                </div>
+              ) : null;
+            })()
+          ) : (
+            clients.map(c => (
+              <div key={c.id} style={{ display: "flex", alignItems: "center", paddingRight: 8 }}
+                onMouseEnter={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "1"; }}
+                onMouseLeave={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "0"; }}>
+                <button onClick={() => setSelClient(c.id)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: selClient === c.id ? C.card : "transparent", color: C.text, fontWeight: selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
+                  <Avatar client={c} size={22} /> {c.name}
+                </button>
+                {!isClient && <button className="del-btn" onClick={() => setConfirmDelete(c.id)} style={{ opacity: 0, border: "none", background: "none", cursor: "pointer", fontSize: 13, color: C.red, padding: "4px 6px", borderRadius: 6, transition: "opacity .15s", flexShrink: 0 }} title="Supprimer">🗑</button>}
+              </div>
+            ))
+          )}
           <div style={{ margin: "16px 14px 0", padding: 10, borderRadius: 10, backgroundColor: C.greenSoft, border: `1px solid ${C.green}25` }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: C.green, letterSpacing: .5, marginBottom: 2 }}>🔔 Relances actives</div>
             <div style={{ fontSize: 10, color: C.textSoft }}>6 automatisations</div>
