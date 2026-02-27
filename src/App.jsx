@@ -710,10 +710,10 @@ export default function App() {
         <FloralCorner style={{ width: 140, top: -25, right: 50 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: C.accent, boxShadow: `0 0 12px ${C.accentGlow}` }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: -0.5 }}>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#E0F8FF", letterSpacing: -0.5 }}>
             {isClient ? "Mon espace" : "petit bout de com"}
           </span>
-          {isClient && selClient && <span style={{ fontSize: 12, color: "#7ABFBF", fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
+          {isClient && selClient && <span style={{ fontSize: 12, color: "#5BAFC0", fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
           {loading && <span style={{ fontSize: 10, color: C.muted, marginLeft: 8, animation: "pulse 1s infinite" }}>⟳ Chargement...</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}>
@@ -737,19 +737,19 @@ export default function App() {
 
       <div style={{ display: "flex", minHeight: "calc(100vh - 58px)" }}>
         {/* ─── SIDEBAR ─── */}
-        <div style={{ width: 218, background: "#0D3B3B", border: "none", padding: "14px 0", flexShrink: 0, boxShadow: "4px 0 20px rgba(0,0,0,0.15)" }}>
+        <div style={{ width: 218, background: "#0A2E3F", border: "none", padding: "14px 0", flexShrink: 0, boxShadow: "4px 0 20px rgba(0,0,0,0.18)" }}>
           <div style={{ marginBottom: 16 }}>
             {tabs.map(t => (
-              <button key={t.id} onClick={() => { setTab(t.id); setCalSel(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 18px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 600 : 400, backgroundColor: tab === t.id ? "rgba(11,191,191,0.15)" : "transparent", color: tab === t.id ? "#0BBFBF" : "#7ABFBF", borderLeft: tab === t.id ? "3px solid #0BBFBF" : "3px solid transparent", transition: "all .15s" }}>
+              <button key={t.id} onClick={() => { setTab(t.id); setCalSel(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 18px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 600 : 400, backgroundColor: tab === t.id ? "rgba(11,191,191,0.18)" : "transparent", color: tab === t.id ? "#0BBFBF" : "#6BBFCF", borderLeft: tab === t.id ? "3px solid #0BBFBF" : "3px solid transparent", transition: "all .15s" }}>
                 <span style={{ fontSize: 14 }}>{t.icon}</span> {t.label}
               </button>
             ))}
           </div>
           <div style={{ padding: "0 18px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, color: "#7ABFBF", letterSpacing: 1.2, textTransform: "uppercase" }}>{isClient ? "Simuler" : "Clients"}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, color: "#5BAFC0", letterSpacing: 1.2, textTransform: "uppercase" }}>{isClient ? "Simuler" : "Clients"}</span>
             {!isClient && <button onClick={() => setShowNewClient(true)} style={{ fontSize: 16, lineHeight: 1, border: "none", background: "none", color: "#0BBFBF", cursor: "pointer", fontWeight: 700, padding: "0 2px" }} title="Nouveau client">+</button>}
           </div>
-          {!isClient && <button onClick={() => setSelClient(null)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: !selClient ? "rgba(11,191,191,0.15)" : "transparent", color: !selClient ? "#0BBFBF" : "#7ABFBF", fontWeight: !selClient ? 600 : 400, borderRadius: 6 }}>Tous</button>}
+          {!isClient && <button onClick={() => setSelClient(null)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: !selClient ? "rgba(11,191,191,0.18)" : "transparent", color: !selClient ? "#E0F8FF" : "#6BBFCF", fontWeight: !selClient ? 600 : 400, borderRadius: 6 }}>Tous</button>}
           {/* En mode client connecté, afficher uniquement son compte */}
           {isClient && authUser ? (
             selClient && (() => {
@@ -766,17 +766,17 @@ export default function App() {
               <div key={c.id} style={{ display: "flex", alignItems: "center", paddingRight: 8 }}
                 onMouseEnter={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "1"; }}
                 onMouseLeave={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "0"; }}>
-                <button onClick={() => setSelClient(c.id)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: selClient === c.id ? "rgba(11,191,191,0.15)" : "transparent", color: selClient === c.id ? "#E0F5F5" : "#7ABFBF", fontWeight: selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
+                <button onClick={() => setSelClient(c.id)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: selClient === c.id ? "rgba(11,191,191,0.18)" : "transparent", color: selClient === c.id ? "#E0F8FF" : "#6BBFCF", fontWeight: selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
                   <Avatar client={c} size={22} /> {c.name}
                 </button>
                 {!isClient && <button className="del-btn" onClick={() => setConfirmDelete(c.id)} style={{ opacity: 0, border: "none", background: "none", cursor: "pointer", fontSize: 13, color: C.red, padding: "4px 6px", borderRadius: 6, transition: "opacity .15s", flexShrink: 0 }} title="Supprimer">🗑</button>}
               </div>
             ))
           )}
-          <div style={{ margin: "16px 14px 0", padding: 12, borderRadius: 12, background: "rgba(11,191,191,0.1)", border: "1px solid rgba(11,191,191,0.2)" }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: C.green, letterSpacing: .5, marginBottom: 2 }}>🔔 Relances actives</div>
-            <div style={{ fontSize: 10, color: "#E0F5F5" }}>6 automatisations</div>
-            <div style={{ fontSize: 9, color: "#7ABFBF" }}>Relance : il y a 2h</div>
+          <div style={{ margin: "16px 14px 0", padding: 12, borderRadius: 12, background: "rgba(11,191,191,0.1)", border: "1px solid rgba(11,191,191,0.25)" }}>
+            <div style={{ fontSize: 9, fontWeight: 800, color: "#0BBFBF", letterSpacing: .8, marginBottom: 2 }}>🔔 Relances actives</div>
+            <div style={{ fontSize: 10, color: "#C0EAF0" }}>6 automatisations</div>
+            <div style={{ fontSize: 9, color: "#5BAFC0" }}>Relance : il y a 2h</div>
           </div>
         </div>
 
@@ -924,7 +924,7 @@ export default function App() {
                               <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                                 <span style={{ fontSize: 9, color: C.textSoft, fontWeight: 600 }}>{(m.followers / 1000).toFixed(1)}k</span>
                                 <div style={{ width: "100%", height: h, borderRadius: 6, background: i === sd.monthly.length - 1 ? `linear-gradient(to top, ${C.accent}, ${C.lavender})` : C.bgLight, border: `1px solid ${i === sd.monthly.length - 1 ? C.accent + "30" : C.border}`, transition: "height .5s ease" }} />
-                                <span style={{ fontSize: 9, color: C.muted }}>{m.month}</span>
+                                <span style={{ fontSize: 9, color: "#5BAFC0" }}>{m.month}</span>
                               </div>
                             );
                           })}
@@ -941,7 +941,7 @@ export default function App() {
                               <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                                 <span style={{ fontSize: 9, color: C.textSoft, fontWeight: 600 }}>{(m.reach / 1000).toFixed(1)}k</span>
                                 <div style={{ width: "100%", height: h, borderRadius: 6, background: i === sd.monthly.length - 1 ? `linear-gradient(to top, ${C.purple}, ${C.lavender})` : C.bgLight, border: `1px solid ${i === sd.monthly.length - 1 ? C.purple + "30" : C.border}`, transition: "height .5s ease" }} />
-                                <span style={{ fontSize: 9, color: C.muted }}>{m.month}</span>
+                                <span style={{ fontSize: 9, color: "#5BAFC0" }}>{m.month}</span>
                               </div>
                             );
                           })}
@@ -983,8 +983,8 @@ export default function App() {
                               </div>
                             </div>
                             <div style={{ textAlign: "center" }}><NetIcon network={tp.net} size={10} /></div>
-                            <div style={{ textAlign: "center", color: C.textSoft }}>{tp.reach.toLocaleString()}<div style={{ fontSize: 9, color: C.muted }}>portée</div></div>
-                            <div style={{ textAlign: "center", color: C.green, fontWeight: 600 }}>{tp.engagement}%<div style={{ fontSize: 9, color: C.muted }}>engage.</div></div>
+                            <div style={{ textAlign: "center", color: C.textSoft }}>{tp.reach.toLocaleString()}<div style={{ fontSize: 9, color: "#5BAFC0" }}>portée</div></div>
+                            <div style={{ textAlign: "center", color: C.green, fontWeight: 600 }}>{tp.engagement}%<div style={{ fontSize: 9, color: "#5BAFC0" }}>engage.</div></div>
                             {/* Engagement bar */}
                             <div style={{ display: "flex", alignItems: "center" }}>
                               <div style={{ flex: 1, height: 6, backgroundColor: C.bgLight, borderRadius: 3, overflow: "hidden", border: `1px solid ${C.border}` }}>
