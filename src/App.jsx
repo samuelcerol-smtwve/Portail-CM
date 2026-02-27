@@ -642,7 +642,6 @@ export default function App() {
     } catch(e) { console.error(e); fire("❌ Erreur création post", "err"); }
     setSaving(false);
   };
-  const isClient = viewMode === "client";
   const filtered = posts.filter(p => selClient ? p.clientId === selClient : true);
   const visible = isClient ? filtered.filter(p => p.status !== "draft") : filtered;
   const stats = { total: posts.length, pending: posts.filter(p => p.status === "pending").length, late: posts.filter(p => p.status === "late").length, approved: posts.filter(p => p.status === "approved").length, revision: posts.filter(p => p.status === "revision").length };
