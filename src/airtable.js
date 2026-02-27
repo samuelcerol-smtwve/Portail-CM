@@ -86,15 +86,15 @@ export async function createClient(data) {
 
 // ─── POSTS ───
 export async function getPosts() {
-  const records = await fetchAll("Posts", "sort[0][field]=Date%20publication&sort[0][direction]=asc");
+  const records = await fetchAll("Posts", "sort[0][field]=Date%20de%20publication&sort[0][direction]=asc");
   return records.map(r => ({
     id: r.id,
     airtableId: r.id,
     clientId: r.fields["Client"]?.[0] || null,
     network: (r.fields["Réseau"] || "instagram").toLowerCase(),
     status: mapStatus(r.fields["Statut"]),
-    day: r.fields["Date publication"] ? new Date(r.fields["Date publication"]).getDate() : 0,
-    date: r.fields["Date publication"] || null,
+    day: r.fields["Date de publication"] ? new Date(r.fields["Date de publication"]).getDate() : 0,
+    date: r.fields["Date de publication"] || null,
     caption: r.fields["Caption"] || "",
     img: r.fields["Visuel URL"] || "",
     hours: r.fields["Heures attente"] || 0,
@@ -116,7 +116,7 @@ export async function createPost(data) {
       Caption: data.caption,
       Client: [data.clientId],
       Réseau: capitalize(data.network),
-      "Date publication": data.date,
+      "Date de publication": data.date,
       Statut: mapStatusToAirtable(data.status || "draft"),
       "Visuel URL": data.img || "",
       "Heures attente": data.hours || 0,
