@@ -516,7 +516,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}>
           <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${C.border}` }}>
             {[{ id: "cm", label: "👩‍💻 CM" }, { id: "client", label: "👤 Client" }].map(v => (
-              <button key={v.id} onClick={() => { setViewMode(v.id); if (v.id === "client" && !selClient) setSelClient(1); if (v.id === "cm") setTab("dashboard"); else setTab("calendar"); }} style={{ padding: "6px 14px", border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer", transition: "all .2s", backgroundColor: viewMode === v.id ? C.accent : "transparent", color: viewMode === v.id ? "#fff" : C.muted }}>
+              <button key={v.id} onClick={() => { setViewMode(v.id); if (v.id === "client" && !selClient && clients.length > 0) setSelClient(clients[0].id); if (v.id === "cm") setTab("dashboard"); else setTab("calendar"); }} style={{ padding: "6px 14px", border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer", transition: "all .2s", backgroundColor: viewMode === v.id ? C.accent : "transparent", color: viewMode === v.id ? "#fff" : C.muted }}>
                 {v.label}
               </button>
             ))}
