@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost, deleteClient, deletePost } from "./airtable.js";
+import { signIn, signOut, getSession, supabase } from "./supabase.js";
 
 // ─── PALETTE (Garden-inspired: dark bg, warm coral/pink accents, organic feel) ───
 const C = {
@@ -414,16 +415,65 @@ function StrategyPanel({ strategy, isClient, onSuggest }) {
   );
 }
 
+// ─── LOGIN PAGE ───
+function LoginPage({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    if (!email || !password) return;
+    setLoading(true);
+    setError("");
+    try {
+      await onLogin(email, password);
+    } catch(e) {
+      setError("Email ou mot de passe incorrect");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", backgroundColor: C.bgLight, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+      <div style={{ width: 380, backgroundColor: C.card, borderRadius: 24, padding: 40, boxShadow: "0 20px 60px rgba(0,0,0,.08)", border: `1px solid ${C.border}`, position: "relative", overflow: "hidden" }}>
+        <FloralCorner style={{ width: 150, top: -30, right: -20 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: C.accent, boxShadow: `0 0 12px ${C.accentGlow}` }} />
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: C.text }}>Mon espace</span>
+        </div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 6 }}>Connexion</h2>
+        <p style={{ fontSize: 12, color: C.muted, marginBottom: 28 }}>Accédez à votre espace client</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Email</label>
+            <input value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} type="email" placeholder="votre@email.com" style={{ width: "100%", padding: "11px 14px", borderRadius: 12, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none", transition: "border .2s" }} onFocus={e => e.target.style.borderColor = C.accent} onBlur={e => e.target.style.borderColor = C.border} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Mot de passe</label>
+            <input value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} type="password" placeholder="••••••••" style={{ width: "100%", padding: "11px 14px", borderRadius: 12, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none", transition: "border .2s" }} onFocus={e => e.target.style.borderColor = C.accent} onBlur={e => e.target.style.borderColor = C.border} />
+          </div>
+          {error && <div style={{ padding: "8px 12px", borderRadius: 10, backgroundColor: C.redSoft, border: `1px solid ${C.red}20`, fontSize: 12, color: C.red }}>{error}</div>}
+          <button onClick={handleSubmit} disabled={loading || !email || !password} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 14, cursor: loading ? "wait" : "pointer", opacity: (!email || !password) ? .6 : 1, marginTop: 6, boxShadow: `0 4px 14px ${C.accentGlow}`, transition: "opacity .2s" }}>
+            {loading ? "Connexion..." : "Se connecter"}
+          </button>
+        </div>
+        <p style={{ fontSize: 11, color: C.muted, textAlign: "center", marginTop: 20 }}>Contactez votre community manager pour obtenir vos accès</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN ───
 export default function App() {
   const [viewMode, setViewMode] = useState("cm");
   const [tab, setTab] = useState("dashboard");
   const [selClient, setSelClient] = useState(null);
-  const [posts, setPosts] = useState(POSTS);
-  const [clients, setClients] = useState(CLIENTS);
+  const [posts, setPosts] = useState([]);
+  const [clients, setClients] = useState([]);
   const [factures, setFactures] = useState(INVOICES);
   const [strategies, setStrategies] = useState(STRATEGIES);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [airtableReady, setAirtableReady] = useState(false);
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
@@ -433,7 +483,38 @@ export default function App() {
   const [newPost, setNewPost] = useState({ caption: "", network: "instagram", date: "", status: "pending", img: "" });
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [confirmDeletePost, setConfirmDeletePost] = useState(null); // clientId à supprimer
+  const [confirmDeletePost, setConfirmDeletePost] = useState(null);
+  const [authUser, setAuthUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true); // clientId à supprimer
+
+  // ─── AUTH SUPABASE ───
+  useEffect(() => {
+    getSession().then(session => {
+      if (session?.user) setAuthUser(session.user);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setAuthUser(session?.user || null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = async (email, password) => {
+    const user = await signIn(email, password);
+    setAuthUser(user);
+    setViewMode("client");
+    setTab("calendar");
+    // Trouver le client correspondant à cet email
+    const match = clients.find(c => c.email === email || c.loginPortail === email);
+    if (match) setSelClient(match.id);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    setAuthUser(null);
+    setViewMode("cm");
+    setTab("dashboard");
+  };
 
   // ─── CHARGER LES DONNÉES AIRTABLE (via proxy /api/airtable) ───
   useEffect(() => {
@@ -563,6 +644,10 @@ export default function App() {
   const clientTabs = [{ id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Contenus" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Factures" }, { id: "strategy", icon: "🎯", label: "Stratégie" }];
   const tabs = isClient ? clientTabs : cmTabs;
 
+  // Afficher login si mode client et pas connecté
+  if (authLoading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "DM Sans, sans-serif", color: "#9590A0" }}>Chargement...</div>;
+  if (isClient && !authUser) return <LoginPage onLogin={handleLogin} />;
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: C.bg, fontFamily: "'DM Sans', system-ui, sans-serif", color: C.text }}>
       <style>{`
@@ -591,6 +676,14 @@ export default function App() {
           {loading && <span style={{ fontSize: 10, color: C.muted, marginLeft: 8, animation: "pulse 1s infinite" }}>⟳ Chargement...</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}>
+          {authUser && isClient && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11, color: C.muted }}>{authUser.email}</span>
+              <button onClick={handleLogout} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
+                Déconnexion
+              </button>
+            </div>
+          )}
           <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${C.border}` }}>
             {[{ id: "cm", label: "👩‍💻 CM" }, { id: "client", label: "👤 Client" }].map(v => (
               <button key={v.id} onClick={() => { setViewMode(v.id); if (v.id === "client" && !selClient && clients.length > 0) setSelClient(clients[0].id); if (v.id === "cm") setTab("dashboard"); else setTab("calendar"); }} style={{ padding: "6px 14px", border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer", transition: "all .2s", backgroundColor: viewMode === v.id ? C.accent : "transparent", color: viewMode === v.id ? "#fff" : C.muted }}>
