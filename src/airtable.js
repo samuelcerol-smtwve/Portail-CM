@@ -17,7 +17,8 @@ async function fetchAll(table, params = "") {
     const res = await fetch(url);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Proxy error: ${res.status}`);
+      const msg = typeof err.error === "string" ? err.error : err.error?.message || `Proxy error: ${res.status}`;
+      throw new Error(msg);
     }
     const data = await res.json();
     records = [...records, ...data.records];
@@ -34,7 +35,8 @@ async function proxyPost(table, body) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Proxy error: ${res.status}`);
+    const msg = typeof err.error === "string" ? err.error : err.error?.message || `Proxy error: ${res.status}`;
+    throw new Error(msg);
   }
   return res.json();
 }
@@ -47,7 +49,8 @@ async function proxyPatch(table, recordId, body) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Proxy error: ${res.status}`);
+    const msg = typeof err.error === "string" ? err.error : err.error?.message || `Proxy error: ${res.status}`;
+    throw new Error(msg);
   }
   return res.json();
 }
