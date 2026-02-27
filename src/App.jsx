@@ -16,35 +16,39 @@ async function uploadImage(file) {
   return publicUrl;
 }
 
-// ─── PALETTE (Garden-inspired: dark bg, warm coral/pink accents, organic feel) ───
+// ─── PALETTE (Tropical: turquoise, coral, warm whites) ───
 const C = {
-  bg: "#FFFFFF",
-  bgLight: "#F8F6FB",
+  bg: "#F7FAFA",
+  bgLight: "#EEF7F7",
   card: "#FFFFFF",
-  cardHover: "#FBF9FD",
-  text: "#1A1A1A",
-  textSoft: "#4A4550",
-  muted: "#9590A0",
-  border: "#E8E4F0",
-  borderLight: "#D5D0E0",
-  accent: "#A78BFA",
-  accentSoft: "#A78BFA14",
-  accentGlow: "#A78BFA35",
-  gold: "#C8A06A",
-  goldSoft: "#C8A06A12",
-  green: "#4A9E62",
-  greenSoft: "#4A9E6212",
-  orange: "#D4886B",
-  orangeSoft: "#D4886B12",
-  red: "#D45B5B",
-  redSoft: "#D45B5B12",
-  purple: "#8B6EC0",
-  purpleSoft: "#8B6EC012",
-  blue: "#5B8EC4",
-  blueSoft: "#5B8EC412",
-  cream: "#F5F0E8",
-  lavender: "#C4B5F0",
-  lavenderSoft: "#C4B5F012",
+  cardHover: "#F5FBFB",
+  text: "#0D2B2B",
+  textSoft: "#2D5555",
+  muted: "#7AA8A8",
+  border: "#C8E6E6",
+  borderLight: "#B0D8D8",
+  accent: "#0BBFBF",
+  accentSoft: "#0BBFBF14",
+  accentGlow: "#0BBFBF35",
+  gold: "#FF8C42",
+  goldSoft: "#FF8C4212",
+  green: "#22A878",
+  greenSoft: "#22A87812",
+  orange: "#FF8C42",
+  orangeSoft: "#FF8C4212",
+  red: "#E84444",
+  redSoft: "#E8444412",
+  purple: "#7B5EA7",
+  purpleSoft: "#7B5EA712",
+  blue: "#2196C4",
+  blueSoft: "#2196C412",
+  cream: "#FFF8F0",
+  lavender: "#80DFDF",
+  lavenderSoft: "#80DFDF12",
+  coral: "#FF6B6B",
+  coralSoft: "#FF6B6B12",
+  teal: "#0BBFBF",
+  tealDark: "#089494",
 };
 
 const CLIENTS = [
@@ -235,19 +239,18 @@ const INV_STATUS = {
   pending: { label: "En attente", color: C.gold, bg: C.goldSoft },
   overdue: { label: "En retard", color: C.red, bg: C.redSoft },
 };
-function FloralCorner({ style }) {
+function TropicalAccent({ style }) {
   return (
-    <svg viewBox="0 0 120 120" style={{ position: "absolute", opacity: 0.1, ...style }} fill="none">
-      <path d="M10 110C10 60 60 10 110 10" stroke={C.accent} strokeWidth="2" />
-      <circle cx="110" cy="10" r="6" fill={C.accent} />
-      <path d="M30 110C30 70 70 30 110 30" stroke={C.lavender} strokeWidth="1.5" />
-      <circle cx="50" cy="90" r="4" fill={C.lavender} />
-      <path d="M60 110Q80 80 110 60" stroke={C.accent} strokeWidth="1" />
-      <circle cx="85" cy="55" r="3" fill={C.accent} />
-      <path d="M20 100Q40 85 60 70Q80 55 100 40" stroke={C.cream} strokeWidth="1" strokeDasharray="4 4" />
+    <svg viewBox="0 0 160 160" style={{ position: "absolute", opacity: 0.08, ...style }} fill="none">
+      <circle cx="80" cy="80" r="70" stroke="#0BBFBF" strokeWidth="1.5" strokeDasharray="6 4" />
+      <circle cx="80" cy="80" r="45" stroke="#FF6B6B" strokeWidth="1" strokeDasharray="3 6" />
+      <circle cx="80" cy="80" r="20" fill="#0BBFBF" opacity="0.3" />
+      <line x1="10" y1="80" x2="150" y2="80" stroke="#0BBFBF" strokeWidth="0.8" />
+      <line x1="80" y1="10" x2="80" y2="150" stroke="#FF6B6B" strokeWidth="0.8" />
     </svg>
   );
 }
+function FloralCorner({ style }) { return <TropicalAccent style={style} />; }
 
 // ─── UTILITY COMPONENTS ───
 function Dot({ color, pulse }) {
@@ -257,7 +260,7 @@ function Dot({ color, pulse }) {
 function Badge({ status, small }) {
   const s = STATUSES[status];
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: small ? "2px 8px" : "3px 10px", borderRadius: 20, fontSize: small ? 10 : 11, fontWeight: 600, color: s.color, backgroundColor: s.bg, letterSpacing: 0.3, border: `1px solid ${s.color}20` }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: small ? "2px 8px" : "3px 10px", borderRadius: 20, fontSize: small ? 10 : 11, fontWeight: 700, color: s.color, backgroundColor: s.bg, letterSpacing: 0.4, border: `1px solid ${s.color}30` }}>
       <Dot color={s.color} pulse={status === "late"} />
       {s.label}
     </span>
@@ -280,7 +283,7 @@ function Avatar({ client, size = 32 }) {
 function StatCard({ label, value, accent, sub }) {
   return (
     <div style={{ flex: 1, minWidth: 115, backgroundColor: C.card, borderRadius: 14, padding: "14px 16px", border: `1px solid ${C.border}`, transition: "all 0.2s", cursor: "default", position: "relative", overflow: "hidden" }}
-      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = accent || C.border; }}
+      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = accent || C.accent; e.currentTarget.style.boxShadow = `0 8px 24px ${accent || C.accent}18`; }}
       onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = C.border; }}>
       <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 26, fontWeight: 700, color: accent || C.text, lineHeight: 1 }}>{value}</div>
@@ -297,8 +300,8 @@ function PostCard({ post, client, onApprove, onRevision, isClient, onDelete }) {
   const canAct = isClient && (post.status === "pending" || post.status === "late");
 
   return (
-    <div style={{ backgroundColor: C.card, borderRadius: 16, overflow: "hidden", border: `1px solid ${post.status === "late" ? C.red + "40" : C.border}`, transition: "all 0.25s", position: "relative" }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.06)"; e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.borderColor = C.borderLight; if(onDelete) e.currentTarget.querySelector(".post-del")?.style && (e.currentTarget.querySelector(".post-del").style.opacity = "1"); }}
+    <div style={{ backgroundColor: C.card, borderRadius: 16, overflow: "hidden", border: `1.5px solid ${post.status === "late" ? C.red + "50" : C.border}`, transition: "all 0.25s", position: "relative" }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 12px 32px rgba(11,191,191,.10)"; e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.borderColor = C.accent + "60"; if(onDelete) e.currentTarget.querySelector(".post-del")?.style && (e.currentTarget.querySelector(".post-del").style.opacity = "1"); }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.borderColor = post.status === "late" ? C.red + "40" : C.border; if(onDelete) e.currentTarget.querySelector(".post-del")?.style && (e.currentTarget.querySelector(".post-del").style.opacity = "0"); }}>
       {onDelete && <button className="post-del" onClick={e => { e.stopPropagation(); onDelete(); }} style={{ position: "absolute", top: 8, right: 8, opacity: 0, border: "none", borderRadius: 8, backgroundColor: "rgba(0,0,0,.5)", color: "#fff", fontSize: 13, padding: "4px 8px", cursor: "pointer", transition: "opacity .15s", zIndex: 2 }}>🗑</button>}
       {imgLoaded && <img src={post.img} alt="" style={{ width: "100%", height: 175, objectFit: "cover", display: "block" }} onError={() => setImgLoaded(false)} />}
@@ -325,7 +328,7 @@ function PostCard({ post, client, onApprove, onRevision, isClient, onDelete }) {
           <div style={{ marginTop: 10 }}>
             {!showComment ? (
               <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => onApprove(post.id)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.green}, ${C.green}cc)`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer", transition: "opacity .15s" }}
+                <button onClick={() => onApprove(post.id)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.green}, #1a9e6e)`, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", boxShadow: `0 4px 12px ${C.green}30` }}
                   onMouseEnter={e => e.target.style.opacity = .85} onMouseLeave={e => e.target.style.opacity = 1}>✓ Valider</button>
                 <button onClick={() => setShowComment(true)} style={{ flex: 1, padding: "9px 0", borderRadius: 10, border: `1.5px solid ${C.accent}`, backgroundColor: "transparent", color: C.accent, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>✏️ Modifier</button>
               </div>
@@ -396,7 +399,7 @@ function StrategyPanel({ strategy, isClient, onSuggest }) {
       <div style={{ marginBottom: 18 }}><SH>Piliers</SH>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {strategy.pillars.map((p, i) => (
-            <div key={i} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${C.border}`, backgroundColor: C.bgLight }}>
+            <div key={i} style={{ padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.border}`, backgroundColor: C.bgLight, transition: "all .2s" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}><span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{p.name}</span><span style={{ fontSize: 10, fontWeight: 600, color: C.accent, padding: "1px 6px", borderRadius: 10, backgroundColor: C.accentSoft }}>{p.ratio}</span></div>
               <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.5 }}>{p.desc}</div>
             </div>
@@ -449,12 +452,12 @@ function LoginPage({ onLogin }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: C.bgLight, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", backgroundColor: C.bgLight, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
       <div style={{ width: 380, backgroundColor: C.card, borderRadius: 24, padding: 40, boxShadow: "0 20px 60px rgba(0,0,0,.08)", border: `1px solid ${C.border}`, position: "relative", overflow: "hidden" }}>
         <FloralCorner style={{ width: 150, top: -30, right: -20 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: C.accent, boxShadow: `0 0 12px ${C.accentGlow}` }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: C.text }}>Mon espace</span>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: C.accent, boxShadow: `0 0 16px ${C.accentGlow}, 0 0 32px ${C.accentSoft}` }} />
+          <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 700, color: C.text }}>Mon espace</span>
         </div>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 6 }}>Connexion</h2>
         <p style={{ fontSize: 12, color: C.muted, marginBottom: 28 }}>Accédez à votre espace client</p>
@@ -468,7 +471,7 @@ function LoginPage({ onLogin }) {
             <input value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSubmit()} type="password" placeholder="••••••••" style={{ width: "100%", padding: "11px 14px", borderRadius: 12, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none", transition: "border .2s" }} onFocus={e => e.target.style.borderColor = C.accent} onBlur={e => e.target.style.borderColor = C.border} />
           </div>
           {error && <div style={{ padding: "8px 12px", borderRadius: 10, backgroundColor: C.redSoft, border: `1px solid ${C.red}20`, fontSize: 12, color: C.red }}>{error}</div>}
-          <button onClick={handleSubmit} disabled={loading || !email || !password} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 14, cursor: loading ? "wait" : "pointer", opacity: (!email || !password) ? .6 : 1, marginTop: 6, boxShadow: `0 4px 14px ${C.accentGlow}`, transition: "opacity .2s" }}>
+          <button onClick={handleSubmit} disabled={loading || !email || !password} style={{ width: "100%", padding: "13px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.tealDark})`, color: "#fff", fontWeight: 700, fontSize: 14, cursor: loading ? "wait" : "pointer", opacity: (!email || !password) ? .6 : 1, marginTop: 6, boxShadow: `0 4px 14px ${C.accentGlow}`, transition: "opacity .2s" }}>
             {loading ? "Connexion..." : "Se connecter"}
           </button>
         </div>
@@ -681,36 +684,49 @@ export default function App() {
   const stats = { total: posts.length, pending: posts.filter(p => p.status === "pending").length, late: posts.filter(p => p.status === "late").length, approved: posts.filter(p => p.status === "approved").length, revision: posts.filter(p => p.status === "revision").length };
 
   const findClient = (id) => clients.find(c => c.id === id || c.airtableId === id);
-  const cmTabs = [{ id: "dashboard", icon: "📊", label: "Dashboard" }, { id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Posts" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Facturation" }, { id: "strategy", icon: "🎯", label: "Stratégie" }, { id: "workflows", icon: "🔔", label: "Relances clients" }, { id: "schema", icon: "🗄️", label: "Airtable" }];
-  const clientTabs = [{ id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Contenus" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Factures" }, { id: "strategy", icon: "🎯", label: "Stratégie" }];
+  const ICONS = {
+    dashboard: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="2" fill="#0BBFBF"/><rect x="13" y="3" width="8" height="8" rx="2" fill="#FF6B6B" opacity="0.5"/><rect x="3" y="13" width="8" height="8" rx="2" fill="#FF6B6B" opacity="0.5"/><rect x="13" y="13" width="8" height="8" rx="2" fill="#0BBFBF" opacity="0.7"/></svg>,
+    calendar: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" fill="#0BBFBF" opacity="0.2"/><rect x="3" y="5" width="18" height="6" rx="2" fill="#0BBFBF"/><circle cx="8" cy="16" r="1.5" fill="#FF6B6B"/><circle cx="12" cy="16" r="1.5" fill="#0BBFBF"/><circle cx="16" cy="16" r="1.5" fill="#FF6B6B" opacity="0.5"/><line x1="8" y1="3" x2="8" y2="7" stroke="#0BBFBF" strokeWidth="2" strokeLinecap="round"/><line x1="16" y1="3" x2="16" y2="7" stroke="#0BBFBF" strokeWidth="2" strokeLinecap="round"/></svg>,
+    posts: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" fill="#0BBFBF" opacity="0.15"/><rect x="3" y="3" width="18" height="5" rx="2" fill="#0BBFBF"/><line x1="7" y1="13" x2="17" y2="13" stroke="#0BBFBF" strokeWidth="1.5" strokeLinecap="round"/><line x1="7" y1="17" x2="13" y2="17" stroke="#FF6B6B" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+    stats: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="14" width="4" height="7" rx="1" fill="#FF6B6B"/><rect x="10" y="9" width="4" height="12" rx="1" fill="#0BBFBF"/><rect x="17" y="4" width="4" height="17" rx="1" fill="#0BBFBF" opacity="0.5"/><line x1="3" y1="22" x2="21" y2="22" stroke="#0BBFBF" strokeWidth="1.5"/></svg>,
+    billing: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" fill="#0BBFBF" opacity="0.15"/><rect x="3" y="4" width="18" height="5" rx="2" fill="#FF6B6B" opacity="0.8"/><line x1="7" y1="14" x2="17" y2="14" stroke="#0BBFBF" strokeWidth="1.5" strokeLinecap="round"/><line x1="7" y1="17" x2="12" y2="17" stroke="#0BBFBF" strokeWidth="1.5" strokeLinecap="round"/><circle cx="17" cy="16" r="3" fill="#22A878"/><line x1="17" y1="14.5" x2="17" y2="17.5" stroke="white" strokeWidth="1" strokeLinecap="round"/></svg>,
+    strategy: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#0BBFBF" strokeWidth="1.5"/><circle cx="12" cy="12" r="5" fill="#0BBFBF" opacity="0.2"/><circle cx="12" cy="12" r="2" fill="#FF6B6B"/><line x1="12" y1="3" x2="12" y2="7" stroke="#0BBFBF" strokeWidth="1.5" strokeLinecap="round"/><line x1="17" y1="7" x2="14" y2="10" stroke="#FF6B6B" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+    workflows: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3C12 3 8 6 8 10C8 12.2 9.8 14 12 14C14.2 14 16 12.2 16 10C16 6 12 3 12 3Z" fill="#FF6B6B" opacity="0.8"/><path d="M12 14V21" stroke="#0BBFBF" strokeWidth="2" strokeLinecap="round"/><path d="M8 18H16" stroke="#0BBFBF" strokeWidth="1.5" strokeLinecap="round"/><circle cx="12" cy="10" r="2" fill="white"/></svg>,
+    schema: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="12" rx="2" fill="#0BBFBF" opacity="0.15"/><ellipse cx="12" cy="6" rx="10" ry="3" fill="#0BBFBF"/><ellipse cx="12" cy="12" rx="10" ry="3" stroke="#0BBFBF" strokeWidth="1.5" fill="none"/><ellipse cx="12" cy="18" rx="10" ry="3" stroke="#FF6B6B" strokeWidth="1.5" fill="#FF6B6B" opacity="0.15"/></svg>,
+  };
+  const cmTabs = [{ id: "dashboard", icon: ICONS.dashboard, label: "Dashboard" }, { id: "calendar", icon: ICONS.calendar, label: "Calendrier" }, { id: "posts", icon: ICONS.posts, label: "Posts" }, { id: "stats", icon: ICONS.stats, label: "Statistiques" }, { id: "billing", icon: ICONS.billing, label: "Facturation" }, { id: "strategy", icon: ICONS.strategy, label: "Stratégie" }, { id: "workflows", icon: ICONS.workflows, label: "Relances" }, { id: "schema", icon: ICONS.schema, label: "Airtable" }];
+  const clientTabs = [{ id: "calendar", icon: ICONS.calendar, label: "Calendrier" }, { id: "posts", icon: ICONS.posts, label: "Contenus" }, { id: "stats", icon: ICONS.stats, label: "Statistiques" }, { id: "billing", icon: ICONS.billing, label: "Factures" }, { id: "strategy", icon: ICONS.strategy, label: "Stratégie" }];
   const tabs = isClient ? clientTabs : cmTabs;
 
   // Afficher login si mode client et pas connecté
-  if (authLoading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "DM Sans, sans-serif", color: "#9590A0" }}>Chargement...</div>;
+  if (authLoading) return <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "'Plus Jakarta Sans', sans-serif", background: "linear-gradient(135deg, #F7FAFA, #EEF7F7)" }}><div style={{ width: 12, height: 12, borderRadius: "50%", backgroundColor: "#0BBFBF", boxShadow: "0 0 20px #0BBFBF60", marginBottom: 14, animation: "pulse 1.2s infinite" }} /><div style={{ fontSize: 13, color: "#7AA8A8", fontWeight: 600, letterSpacing: 1 }}>Chargement...</div></div>;
   if (isClient && !authUser) return <LoginPage onLogin={handleLogin} />;
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: C.bg, fontFamily: "'DM Sans', system-ui, sans-serif", color: C.text }}>
+    <div style={{ minHeight: "100vh", backgroundColor: C.bg, fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", color: C.text }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes toastIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+        button{transition:all .18s cubic-bezier(.4,0,.2,1)!important}
         ::placeholder{color:#BFBAB2}
         textarea:focus,input:focus{outline:none}
-        ::-webkit-scrollbar{width:6px}
+        ::-webkit-scrollbar{width:5px}
         ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:#D0CCC6;border-radius:3px}
+        ::-webkit-scrollbar-thumb{background:#0BBFBF44;border-radius:10px}
+        ::-webkit-scrollbar-thumb:hover{background:#0BBFBF88}
       `}</style>
 
       {/* ─── HEADER ─── */}
-      <div style={{ background: `linear-gradient(135deg, #FFFFFF 0%, ${C.bgLight} 50%, #FFFFFF 100%)`, borderBottom: `1px solid ${C.border}`, padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 58, position: "relative", overflow: "hidden" }}>
+      <div style={{ background: `linear-gradient(135deg, #FFFFFF 0%, ${C.bgLight} 60%, #E8F9F9 100%)`, borderBottom: `1px solid ${C.border}`, padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 58, position: "relative", overflow: "hidden" }}>
         <FloralCorner style={{ width: 140, top: -25, right: 50 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: C.accent, boxShadow: `0 0 12px ${C.accentGlow}` }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: -0.5 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: C.accent, boxShadow: `0 0 16px ${C.accentGlow}, 0 0 32px ${C.accentSoft}` }} />
+          <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: -0.5 }}>
             {isClient ? "Mon espace" : "petit bout de com"}
           </span>
           {isClient && selClient && <span style={{ fontSize: 12, color: C.muted, fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
@@ -737,11 +753,11 @@ export default function App() {
 
       <div style={{ display: "flex", minHeight: "calc(100vh - 58px)" }}>
         {/* ─── SIDEBAR ─── */}
-        <div style={{ width: 210, backgroundColor: C.bgLight, borderRight: `1px solid ${C.border}`, padding: "14px 0", flexShrink: 0 }}>
+        <div style={{ width: 218, background: `linear-gradient(180deg, #FFFFFF 0%, ${C.bgLight} 100%)`, borderRight: `1px solid ${C.border}`, padding: "14px 0", flexShrink: 0, boxShadow: "2px 0 12px rgba(11,191,191,0.04)" }}>
           <div style={{ marginBottom: 16 }}>
             {tabs.map(t => (
-              <button key={t.id} onClick={() => { setTab(t.id); setCalSel(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 18px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 600 : 400, backgroundColor: tab === t.id ? C.accentSoft : "transparent", color: tab === t.id ? C.accent : C.muted, borderLeft: tab === t.id ? `3px solid ${C.accent}` : "3px solid transparent", transition: "all .15s" }}>
-                <span style={{ fontSize: 14 }}>{t.icon}</span> {t.label}
+              <button key={t.id} onClick={() => { setTab(t.id); setCalSel(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 18px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 600 : 400, backgroundColor: tab === t.id ? C.accentSoft : "transparent", color: tab === t.id ? C.accent : C.muted, borderLeft: tab === t.id ? `3px solid ${C.accent}` : "3px solid transparent", borderRadius: tab === t.id ? "0 8px 8px 0" : 0, transition: "all .15s" }}>
+                <span style={{ display:"flex",alignItems:"center" }}>{t.icon}</span> {t.label}
               </button>
             ))}
           </div>
@@ -773,8 +789,8 @@ export default function App() {
               </div>
             ))
           )}
-          <div style={{ margin: "16px 14px 0", padding: 10, borderRadius: 10, backgroundColor: C.greenSoft, border: `1px solid ${C.green}25` }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: C.green, letterSpacing: .5, marginBottom: 2 }}>🔔 Relances actives</div>
+          <div style={{ margin: "16px 14px 0", padding: 12, borderRadius: 12, background: `linear-gradient(135deg, ${C.greenSoft}, ${C.accentSoft})`, border: `1px solid ${C.green}30`, boxShadow: `0 2px 8px ${C.green}10` }}>
+            <div style={{ fontSize: 9, fontWeight: 800, color: C.green, letterSpacing: .8, marginBottom: 3, textTransform: "uppercase" }}>🔔 Relances actives</div>
             <div style={{ fontSize: 10, color: C.textSoft }}>6 automatisations</div>
             <div style={{ fontSize: 9, color: C.muted }}>Relance : il y a 2h</div>
           </div>
@@ -786,7 +802,7 @@ export default function App() {
           {/* DASHBOARD */}
           {tab === "dashboard" && !isClient && (
             <div style={{ animation: "fadeIn .3s ease" }}>
-              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 18 }}>Bonjour 👋</h2>
+              <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, marginBottom: 18, background: `linear-gradient(135deg, ${C.text}, ${C.accent})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Bonjour 👋</h2>
               <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
                 <StatCard label="Total" value={stats.total} sub="ce mois" />
                 <StatCard label="En attente" value={stats.pending} accent={C.gold} sub="validation" />
@@ -802,7 +818,7 @@ export default function App() {
                   const ap = cp.filter(p => p.status === "approved").length;
                   return (
                     <div key={cl.id} onClick={() => { setSelClient(cl.id); setTab("posts"); }} style={{ backgroundColor: C.card, borderRadius: 14, padding: 14, border: `1px solid ${C.border}`, cursor: "pointer", transition: "all .2s" }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = cl.color; e.currentTarget.style.boxShadow = `0 4px 16px ${cl.color}15`; }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = cl.color; e.currentTarget.style.boxShadow = `0 8px 28px ${cl.color}22`; e.currentTarget.style.transform = "translateY(-3px)"; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}><Avatar client={cl} size={28} /><span style={{ fontWeight: 600, fontSize: 13 }}>{cl.name}</span></div>
                       <div style={{ display: "flex", gap: 6 }}>
@@ -823,7 +839,7 @@ export default function App() {
           {/* CALENDAR */}
           {tab === "calendar" && (
             <div style={{ animation: "fadeIn .3s ease" }}>
-              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 4 }}>{isClient ? "Mon calendrier" : "Calendrier"}</h2>
+              <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, marginBottom: 4 }}>{isClient ? "Mon calendrier" : "Calendrier"}</h2>
               <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Mars 2026{selClient && !isClient ? ` — ${clients.find(c => c.id === selClient)?.name}` : ""}</p>
               <div style={{ display: "flex", gap: 20 }}>
                 <div style={{ flex: 1 }}><Calendar posts={visible} onSelect={setCalSel} selectedId={calSel} /></div>
@@ -857,15 +873,15 @@ export default function App() {
           {tab === "posts" && (
             <div style={{ animation: "fadeIn .3s ease" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22 }}>{isClient ? "Contenus à valider" : "Tous les posts"}</h2>
+                <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22 }}>{isClient ? "Contenus à valider" : "Tous les posts"}</h2>
                 {!isClient && selClient && (
-                  <button onClick={() => setShowNewPost(true)} style={{ padding: "9px 18px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer", boxShadow: `0 2px 8px ${C.accentGlow}`, display: "flex", alignItems: "center", gap: 6 }}>
+                  <button onClick={() => setShowNewPost(true)} style={{ padding: "9px 18px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.tealDark})`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer", boxShadow: `0 2px 8px ${C.accentGlow}`, display: "flex", alignItems: "center", gap: 6 }}>
                     + Nouveau post
                   </button>
                 )}
               </div>
               <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{selClient ? clients.find(c => c.id === selClient)?.name : "Tous"} — Mars 2026</p>
-              {isClient && <div style={{ padding: "10px 14px", borderRadius: 12, marginBottom: 16, backgroundColor: C.accentSoft, border: `1px solid ${C.accent}25`, fontSize: 12, color: C.textSoft }}>💡 <strong style={{ color: C.accent }}>Validez</strong> ou <strong style={{ color: C.accent }}>demandez une modification</strong>. Notification instantanée.</div>}
+              {isClient && <div style={{ padding: "10px 14px", borderRadius: 12, marginBottom: 16, backgroundColor: C.accentSoft, border: `1px solid ${C.accent}40`, fontSize: 12, color: C.textSoft, borderRadius: 14, borderLeft: `3px solid ${C.accent}` }}>💡 <strong style={{ color: C.accent }}>Validez</strong> ou <strong style={{ color: C.accent }}>demandez une modification</strong>. Notification instantanée.</div>}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
                 {visible.sort((a, b) => a.day - b.day).map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={isClient} onApprove={approve} onRevision={revise} onDelete={!isClient ? () => setConfirmDeletePost(p.id) : null} />)}
               </div>
@@ -888,7 +904,7 @@ export default function App() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
                       {!isClient && <Avatar client={cl} size={28} />}
                       <div>
-                        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22 }}>{isClient ? "Mes statistiques" : cl.name}</h2>
+                        <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22 }}>{isClient ? "Mes statistiques" : cl.name}</h2>
                         <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Données février 2026</div>
                       </div>
                     </div>
@@ -903,7 +919,7 @@ export default function App() {
                         { label: "Clics", value: sd.overview.clicks.toLocaleString(), color: C.gold },
                       ].map((kpi, i) => (
                         <div key={i} style={{ backgroundColor: C.card, borderRadius: 14, padding: "14px 16px", border: `1px solid ${C.border}`, transition: "all .2s" }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = kpi.color + "40"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = kpi.color + "60"; e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = `0 8px 24px ${kpi.color}18`; }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "translateY(0)"; }}>
                           <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: .8, textTransform: "uppercase", marginBottom: 4 }}>{kpi.label}</div>
                           <div style={{ fontSize: 24, fontWeight: 700, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
@@ -1029,7 +1045,7 @@ export default function App() {
               })()
               : !isClient ? (
                 <div>
-                  <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 16 }}>Statistiques</h2>
+                  <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, marginBottom: 16 }}>Statistiques</h2>
                   <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Sélectionnez un client pour voir ses statistiques détaillées</p>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
                     {clients.map(cl => {
@@ -1068,14 +1084,14 @@ export default function App() {
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         {!isClient && <Avatar client={cl} size={28} />}
                         <div>
-                          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22 }}>{isClient ? "Mes factures" : `Facturation — ${cl.name}`}</h2>
+                          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22 }}>{isClient ? "Mes factures" : `Facturation — ${cl.name}`}</h2>
                           <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Historique et suivi des paiements</div>
                         </div>
                       </div>
                       {!isClient && (
                         <button onClick={() => fire("📎 Facture déposée (simulation)")} style={{
                           padding: "9px 18px", borderRadius: 10, border: "none",
-                          background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`,
+                          background: `linear-gradient(135deg, ${C.accent}, ${C.tealDark})`,
                           color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer",
                           boxShadow: `0 2px 8px ${C.accentGlow}`, transition: "all .2s",
                         }}
@@ -1171,7 +1187,7 @@ export default function App() {
               })()
               : !isClient ? (
                 <div>
-                  <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 16 }}>Facturation</h2>
+                  <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, marginBottom: 16 }}>Facturation</h2>
                   <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Vue d'ensemble par client</p>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
                     {clients.map(cl => {
@@ -1207,7 +1223,7 @@ export default function App() {
           {tab === "strategy" && (
             <div style={{ maxWidth: 660, animation: "fadeIn .3s ease" }}>
               {selClient ? <StrategyPanel strategy={strategies[selClient]} isClient={isClient} onSuggest={() => fire("💬 Suggestion envoyée")} />
-              : <div><h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 16 }}>Stratégies</h2>
+              : <div><h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, marginBottom: 16 }}>Stratégies</h2>
                 <div style={{ display: "grid", gap: 12 }}>
                   {clients.map(cl => (
                     <div key={cl.id} onClick={() => setSelClient(cl.id)} style={{ backgroundColor: C.card, borderRadius: 14, padding: 16, border: `1px solid ${C.border}`, cursor: "pointer", transition: "all .2s" }}
@@ -1223,7 +1239,7 @@ export default function App() {
           {/* WORKFLOWS */}
           {tab === "workflows" && !isClient && (
             <div style={{ animation: "fadeIn .3s ease" }}>
-              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 16 }}>Relances clients</h2>
+              <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, marginBottom: 16 }}>Relances clients</h2>
               <div style={{ backgroundColor: C.card, borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border}` }}>
                 <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr 1.2fr 2fr 60px", gap: 6, padding: "8px 12px", fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: .8, textTransform: "uppercase", backgroundColor: C.bgLight, borderBottom: `1px solid ${C.border}` }}>
                   <span>Workflow</span><span>Trigger</span><span>Condition</span><span>Action</span><span>Statut</span>
@@ -1245,7 +1261,7 @@ export default function App() {
           {/* SCHEMA */}
           {tab === "schema" && !isClient && (
             <div style={{ animation: "fadeIn .3s ease" }}>
-              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 16 }}>Base Airtable</h2>
+              <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, marginBottom: 16 }}>Base Airtable</h2>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 14 }}>
                 {AIRTABLE.map((t, i) => (
                   <div key={i} style={{ backgroundColor: C.card, borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border}` }}>
@@ -1307,7 +1323,7 @@ export default function App() {
       {showNewClient && (
         <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, animation: "fadeIn .2s ease" }} onClick={() => setShowNewClient(false)}>
           <div style={{ backgroundColor: C.card, borderRadius: 20, padding: 28, width: 400, boxShadow: "0 20px 60px rgba(0,0,0,.15)", animation: "fadeIn .2s ease" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, marginBottom: 20 }}>Nouveau client</h3>
+            <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, marginBottom: 20 }}>Nouveau client</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Nom *</label>
@@ -1337,7 +1353,7 @@ export default function App() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-              <button onClick={handleCreateClient} disabled={saving || !newClient.name.trim()} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer", opacity: !newClient.name.trim() ? .5 : 1 }}>
+              <button onClick={handleCreateClient} disabled={saving || !newClient.name.trim()} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.tealDark})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer", opacity: !newClient.name.trim() ? .5 : 1 }}>
                 {saving ? "Création..." : "Créer le client"}
               </button>
               <button onClick={() => setShowNewClient(false)} style={{ padding: "11px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
@@ -1350,7 +1366,7 @@ export default function App() {
       {showNewPost && (
         <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, animation: "fadeIn .2s ease" }} onClick={() => { setShowNewPost(false); setImgPreview(null); }}>
           <div style={{ backgroundColor: C.card, borderRadius: 20, padding: 28, width: 460, boxShadow: "0 20px 60px rgba(0,0,0,.15)", animation: "fadeIn .2s ease" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, marginBottom: 6 }}>Nouveau post</h3>
+            <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, marginBottom: 6 }}>Nouveau post</h3>
             <p style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>Client : <strong style={{ color: C.text }}>{clients.find(c => c.id === selClient)?.name}</strong></p>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
@@ -1391,7 +1407,7 @@ export default function App() {
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-              <button onClick={handleCreatePost} disabled={saving || !newPost.caption.trim()} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer", opacity: !newPost.caption.trim() ? .5 : 1 }}>
+              <button onClick={handleCreatePost} disabled={saving || !newPost.caption.trim()} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.tealDark})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer", opacity: !newPost.caption.trim() ? .5 : 1 }}>
                 {saving ? "Création..." : "Créer le post"}
               </button>
               <button onClick={() => { setShowNewPost(false); setImgPreview(null); }} style={{ padding: "11px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
@@ -1402,7 +1418,7 @@ export default function App() {
 
       {/* TOAST */}
       {toast && (
-        <div style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", padding: "11px 20px", borderRadius: 12, backgroundColor: toast.type === "rev" ? C.orange : C.green, color: "#fff", fontSize: 12, fontWeight: 500, boxShadow: "0 8px 24px rgba(0,0,0,.15)", animation: "toastIn .25s ease" }}>
+        <div style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", padding: "11px 20px", borderRadius: 12, backgroundColor: toast.type === "rev" ? C.orange : toast.type === "err" ? C.red : C.green, color: "#fff", fontSize: 12, fontWeight: 600, boxShadow: "0 12px 32px rgba(0,0,0,.2)", letterSpacing: 0.2, backdropFilter: "blur(8px)", animation: "toastIn .25s ease" }}>
           {toast.msg}
         </div>
       )}
