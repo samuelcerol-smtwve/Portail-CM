@@ -786,7 +786,16 @@ export default function App() {
           {/* DASHBOARD */}
           {tab === "dashboard" && !isClient && (
             <div style={{ animation: "fadeIn .3s ease" }}>
-              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 18 }}>Bonjour 👋</h2>
+              <div style={{ marginBottom: 28 }}>
+                <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 6, letterSpacing: -0.5 }}>Bonjour Elsa 👋</h2>
+                <p style={{ fontSize: 15, color: C.textSoft, marginBottom: 6, fontWeight: 500 }}>Bienvenue dans ton espace de gestion.</p>
+                <p style={{ fontSize: 13, color: C.muted }}>
+                  {stats.pending > 0
+                    ? <><strong style={{ color: C.orange, fontWeight: 700 }}>{stats.pending} post{stats.pending > 1 ? "s" : ""} en attente</strong> de validation aujourd'hui</>
+                    : <span style={{ color: C.green }}>Tout est à jour, aucun post en attente ✓</span>
+                  }
+                </p>
+              </div>
               <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
                 <StatCard label="Total" value={stats.total} sub="ce mois" />
                 <StatCard label="En attente" value={stats.pending} accent={C.gold} sub="validation" />
