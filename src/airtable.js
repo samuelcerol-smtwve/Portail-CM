@@ -87,9 +87,7 @@ export async function createClient(data) {
 // ─── POSTS ───
 export async function getPosts() {
   const records = await fetchAll("Posts", "sort[0][field]=Date%20de%20publication&sort[0][direction]=asc");
-  return records.map(r => {
-    console.log("POST DEBUG:", { id: r.id, clientField: r.fields["Client"], fields: Object.keys(r.fields) });
-    return {
+  return records.map(r => ({
     id: r.id,
     airtableId: r.id,
     clientId: r.fields["Client"]?.[0] || null,
@@ -103,8 +101,7 @@ export async function getPosts() {
     comments: r.fields["Commentaire client"]
       ? [{ author: "client", text: r.fields["Commentaire client"], date: "récemment" }]
       : [],
-  };
-  });
+  }));
 }
 
 export async function updatePostStatus(airtableId, status, comment = "") {
