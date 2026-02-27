@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost, deleteClient, deletePost } from "./airtable.js";
-import { signIn, signOut, getSession, supabase } from "./supabase.js";
+import { signIn, signOut, getSession, supabase, uploadImage } from "./supabase.js";
 
 // ─── PALETTE (Garden-inspired: dark bg, warm coral/pink accents, organic feel) ───
 const C = {
@@ -481,6 +481,8 @@ export default function App() {
   const [showNewPost, setShowNewPost] = useState(false);
   const [newClient, setNewClient] = useState({ name: "", email: "", color: "#A78BFA", reseaux: [] });
   const [newPost, setNewPost] = useState({ caption: "", network: "instagram", date: "", status: "pending", img: "" });
+  const [imgPreview, setImgPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmDeletePost, setConfirmDeletePost] = useState(null);
@@ -621,6 +623,23 @@ export default function App() {
     setSaving(false);
   };
 
+  const handleImageUpload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = e => setImgPreview(e.target.result);
+    reader.readAsDataURL(file);
+    try {
+      const url = await uploadImage(file);
+      setNewPost(p => ({ ...p, img: url }));
+      fire("🖼 Image uploadée !");
+    } catch(e) {
+      console.error(e);
+      fire("❌ Erreur upload image", "err");
+    }
+    setUploading(false);
+  };
+
   const handleCreatePost = async () => {
     if (!newPost.caption.trim() || !selClient) return;
     setSaving(true);
@@ -638,6 +657,7 @@ export default function App() {
       setPosts(p => [...p, created]);
       setShowNewPost(false);
       setNewPost({ caption: "", network: "instagram", date: "", status: "pending", img: "" });
+      setImgPreview(null);
       fire("✅ Post créé !");
     } catch(e) { console.error(e); fire("❌ Erreur création post", "err"); }
     setSaving(false);
@@ -1314,7 +1334,7 @@ export default function App() {
 
       {/* MODAL NOUVEAU POST */}
       {showNewPost && (
-        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, animation: "fadeIn .2s ease" }} onClick={() => setShowNewPost(false)}>
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, animation: "fadeIn .2s ease" }} onClick={() => { setShowNewPost(false); setImgPreview(null); }}>
           <div style={{ backgroundColor: C.card, borderRadius: 20, padding: 28, width: 460, boxShadow: "0 20px 60px rgba(0,0,0,.15)", animation: "fadeIn .2s ease" }} onClick={e => e.stopPropagation()}>
             <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, marginBottom: 6 }}>Nouveau post</h3>
             <p style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>Client : <strong style={{ color: C.text }}>{clients.find(c => c.id === selClient)?.name}</strong></p>
@@ -1338,8 +1358,12 @@ export default function App() {
                 <textarea value={newPost.caption} onChange={e => setNewPost(p => ({...p, caption: e.target.value}))} placeholder="Texte du post..." rows={4} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", resize: "vertical" }} />
               </div>
               <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>URL du visuel</label>
-                <input value={newPost.img} onChange={e => setNewPost(p => ({...p, img: e.target.value}))} placeholder="https://..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit" }} />
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Visuel</label>
+                {imgPreview && <img src={imgPreview} alt="preview" style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 10, marginBottom: 8, border: `1px solid ${C.border}` }} />}
+                <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 0", borderRadius: 10, border: `2px dashed ${uploading ? C.accent : C.border}`, backgroundColor: uploading ? C.accentSoft : C.bgLight, cursor: "pointer", fontSize: 12, color: uploading ? C.accent : C.muted, fontWeight: 600, transition: "all .2s" }}>
+                  <input type="file" accept="image/*" onChange={e => e.target.files[0] && handleImageUpload(e.target.files[0])} style={{ display: "none" }} />
+                  {uploading ? "⏳ Upload en cours..." : imgPreview ? "🔄 Changer l'image" : "📁 Choisir une image"}
+                </label>
               </div>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Statut initial</label>
@@ -1356,7 +1380,7 @@ export default function App() {
               <button onClick={handleCreatePost} disabled={saving || !newPost.caption.trim()} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer", opacity: !newPost.caption.trim() ? .5 : 1 }}>
                 {saving ? "Création..." : "Créer le post"}
               </button>
-              <button onClick={() => setShowNewPost(false)} style={{ padding: "11px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
+              <button onClick={() => { setShowNewPost(false); setImgPreview(null); }} style={{ padding: "11px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
             </div>
           </div>
         </div>
