@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost } from "./airtable.js";
+import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost, deleteClient } from "./airtable.js";
 
 // ─── PALETTE (Garden-inspired: dark bg, warm coral/pink accents, organic feel) ───
 const C = {
@@ -431,6 +431,7 @@ export default function App() {
   const [newClient, setNewClient] = useState({ name: "", email: "", color: "#A78BFA", reseaux: [] });
   const [newPost, setNewPost] = useState({ caption: "", network: "instagram", date: "", status: "pending", img: "" });
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null); // clientId à supprimer
 
   // ─── CHARGER LES DONNÉES AIRTABLE (via proxy /api/airtable) ───
   useEffect(() => {
@@ -479,6 +480,20 @@ export default function App() {
     }
     setPosts(p => p.map(x => x.id === id ? { ...x, status: "revision", comments: [{ author: "client", text: c || "Modification demandée", date: "à l'instant" }] } : x));
     fire("✏️ Demande envoyée", "rev");
+  };
+
+  const handleDeleteClient = async () => {
+    if (!confirmDelete) return;
+    setSaving(true);
+    try {
+      await deleteClient(confirmDelete);
+      setClients(c => c.filter(x => x.id !== confirmDelete));
+      setPosts(p => p.filter(x => x.clientId !== confirmDelete));
+      if (selClient === confirmDelete) setSelClient(null);
+      setConfirmDelete(null);
+      fire("🗑 Client supprimé");
+    } catch(e) { console.error(e); fire("❌ Erreur suppression", "err"); }
+    setSaving(false);
   };
 
   const isClient = viewMode === "client";
@@ -588,9 +603,14 @@ export default function App() {
           </div>
           {!isClient && <button onClick={() => setSelClient(null)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: !selClient ? C.card : "transparent", color: C.text, fontWeight: !selClient ? 600 : 400, borderRadius: 6 }}>Tous</button>}
           {clients.map(c => (
-            <button key={c.id} onClick={() => setSelClient(c.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: selClient === c.id ? C.card : "transparent", color: C.text, fontWeight: selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
-              <Avatar client={c} size={22} /> {c.name}
-            </button>
+            <div key={c.id} style={{ display: "flex", alignItems: "center", paddingRight: 8 }}
+              onMouseEnter={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "1"; }}
+              onMouseLeave={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "0"; }}>
+              <button onClick={() => setSelClient(c.id)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: selClient === c.id ? C.card : "transparent", color: C.text, fontWeight: selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
+                <Avatar client={c} size={22} /> {c.name}
+              </button>
+              <button className="del-btn" onClick={() => setConfirmDelete(c.id)} style={{ opacity: 0, border: "none", background: "none", cursor: "pointer", fontSize: 13, color: C.red, padding: "4px 6px", borderRadius: 6, transition: "opacity .15s", flexShrink: 0 }} title="Supprimer">🗑</button>
+            </div>
           ))}
           <div style={{ margin: "16px 14px 0", padding: 10, borderRadius: 10, backgroundColor: C.greenSoft, border: `1px solid ${C.green}25` }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: C.green, letterSpacing: .5, marginBottom: 2 }}>🔔 Relances actives</div>
@@ -1083,6 +1103,25 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {/* MODAL CONFIRMATION SUPPRESSION */}
+      {confirmDelete && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, animation: "fadeIn .2s ease" }}>
+          <div style={{ backgroundColor: C.card, borderRadius: 20, padding: 28, width: 360, boxShadow: "0 20px 60px rgba(0,0,0,.15)", textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🗑</div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Supprimer ce client ?</h3>
+            <p style={{ fontSize: 12, color: C.muted, marginBottom: 24, lineHeight: 1.6 }}>
+              <strong style={{ color: C.text }}>{clients.find(c => c.id === confirmDelete)?.name}</strong> et tous ses posts seront supprimés. Cette action est irréversible.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
+              <button onClick={handleDeleteClient} disabled={saving} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", backgroundColor: C.red, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer" }}>
+                {saving ? "Suppression..." : "Supprimer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL NOUVEAU CLIENT */}
       {showNewClient && (

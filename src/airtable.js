@@ -71,6 +71,17 @@ export async function getClients() {
   }));
 }
 
+export async function deleteClient(recordId) {
+  const res = await fetch(`${PROXY}?table=${encodeURIComponent("Clients")}&recordId=${recordId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Proxy error: ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function createClient(data) {
   return proxyPost("Clients", {
     fields: {
