@@ -710,7 +710,7 @@ export default function App() {
         <FloralCorner style={{ width: 140, top: -25, right: 50 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
           <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2A8FA8", boxShadow: `0 0 12px ${C.accentGlow}` }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#0A2E3F", letterSpacing: -0.5 }}>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#E0F8FF", letterSpacing: -0.5 }}>
             {isClient ? "Mon espace" : "petit bout de com"}
           </span>
           {isClient && selClient && <span style={{ fontSize: 12, color: "#4A9BB0", fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
@@ -786,16 +786,7 @@ export default function App() {
           {/* DASHBOARD */}
           {tab === "dashboard" && !isClient && (
             <div style={{ animation: "fadeIn .3s ease" }}>
-              <div style={{ marginBottom: 28 }}>
-                <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 6, letterSpacing: -0.5 }}>Bonjour Elsa 👋</h2>
-                <p style={{ fontSize: 15, color: C.textSoft, marginBottom: 6, fontWeight: 500 }}>Bienvenue dans ton espace de gestion.</p>
-                <p style={{ fontSize: 13, color: C.muted }}>
-                  {stats.pending > 0
-                    ? <><strong style={{ color: C.orange, fontWeight: 700 }}>{stats.pending} post{stats.pending > 1 ? "s" : ""} en attente</strong> de validation aujourd'hui</>
-                    : <span style={{ color: C.green }}>Tout est à jour, aucun post en attente ✓</span>
-                  }
-                </p>
-              </div>
+              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 18 }}>Bonjour 👋</h2>
               <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
                 <StatCard label="Total" value={stats.total} sub="ce mois" />
                 <StatCard label="En attente" value={stats.pending} accent={C.gold} sub="validation" />
@@ -822,10 +813,40 @@ export default function App() {
                   );
                 })}
               </div>
-              <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: C.textSoft }}>🔥 Urgents</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(255px,1fr))", gap: 12 }}>
-                {posts.filter(p => p.status === "late" || (p.status === "pending" && p.hours > 48)).map(p => <PostCard key={p.id} post={p} client={clients.find(c => c.id === p.clientId)} isClient={false} onApprove={approve} onRevision={revise} />)}
-              </div>
+              <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text, display: "flex", alignItems: "center", gap: 8 }}>
+                🔥 Urgents
+                {(() => { const n = posts.filter(p => p.status === "late" || (p.status === "pending" && p.date && (new Date() - new Date(p.date)) / 86400000 > 2)).length; return n > 0 ? <span style={{ backgroundColor: C.red, color: "#fff", borderRadius: 20, fontSize: 11, fontWeight: 700, padding: "1px 8px" }}>{n}</span> : null; })()}
+              </h3>
+              {(() => {
+                const urgents = posts.filter(p => p.status === "late" || (p.status === "pending" && p.date && (new Date() - new Date(p.date)) / 86400000 > 2));
+                if (urgents.length === 0) return (
+                  <div style={{ padding: "16px 20px", borderRadius: 14, backgroundColor: C.greenSoft, border: `1px solid ${C.green}25`, fontSize: 13, color: C.green, fontWeight: 500 }}>
+                    ✅ Aucun post urgent — tout est dans les temps !
+                  </div>
+                );
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(255px,1fr))", gap: 12 }}>
+                    {urgents.map(p => {
+                      const cl = clients.find(c => c.id === p.clientId);
+                      const daysLate = p.date ? Math.floor((new Date() - new Date(p.date)) / 86400000) : null;
+                      return (
+                        <div key={p.id} style={{ backgroundColor: C.card, borderRadius: 14, padding: "14px 16px", border: `1.5px solid ${C.red}40`, position: "relative", overflow: "hidden" }}>
+                          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${C.red}, ${C.orange})` }} />
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                            {cl && <Avatar client={cl} size={22} />}
+                            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{cl?.name || "—"}</span>
+                            <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 700, color: p.status === "late" ? C.red : C.orange, backgroundColor: p.status === "late" ? C.redSoft : C.orangeSoft, padding: "2px 8px", borderRadius: 20 }}>
+                              {p.status === "late" ? "En retard" : `+${daysLate}j`}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: 12, color: C.textSoft, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.caption || "Sans caption"}</p>
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>📅 {p.date ? new Date(p.date).toLocaleDateString("fr-FR") : "Pas de date"}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
