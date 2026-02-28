@@ -852,7 +852,7 @@ export default function App() {
 
   // Afficher login si mode client et pas connecté
   if (authLoading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "DM Sans, sans-serif", color: "#9590A0" }}>Chargement...</div>;
-  if (isClient && !authUser) return <LoginPage onLogin={handleLogin} />;
+  if (!authUser) return <LoginPage onLogin={handleLogin} />;
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: C.bg, fontFamily: "'DM Sans', system-ui, sans-serif", color: C.text }}>
@@ -881,22 +881,14 @@ export default function App() {
           {isClient && selClient && <span style={{ fontSize: 12, color: "#4A9BB0", fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
           {loading && <span style={{ fontSize: 10, color: C.muted, marginLeft: 8, animation: "pulse 1s infinite" }}>⟳ Chargement...</span>}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, zIndex: 1 }}>
-          {authUser && isClient && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 11, color: C.muted }}>{authUser.email}</span>
-              <button onClick={handleLogout} style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
-                Déconnexion
-              </button>
-            </div>
-          )}
-          <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: `1.5px solid ${C.border}` }}>
-            {[{ id: "cm", label: "👩‍💻 CM" }, { id: "client", label: "👤 Client" }].map(v => (
-              <button key={v.id} onClick={() => { setViewMode(v.id); if (v.id === "client" && !selClient && clients.length > 0) setSelClient(clients[0].id); if (v.id === "cm") setTab("dashboard"); else setTab("calendar"); }} style={{ padding: "6px 14px", border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer", transition: "all .2s", backgroundColor: viewMode === v.id ? C.accent : "transparent", color: viewMode === v.id ? "#fff" : C.muted }}>
-                {v.label}
-              </button>
-            ))}
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, zIndex: 1 }}>
+          <span style={{ fontSize: 11, color: C.muted }}>{authUser?.email}</span>
+          <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 20, backgroundColor: isClient ? C.accent + "20" : "#0A2E3F", color: isClient ? C.accent : "#7CCFDF", fontWeight: 700, border: `1px solid ${isClient ? C.accent + "40" : "#7CCFDF40"}` }}>
+            {isClient ? "👤 Client" : "👩‍💻 CM"}
+          </span>
+          <button onClick={handleLogout} style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
+            Déconnexion
+          </button>
         </div>
       </div>
 
