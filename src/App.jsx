@@ -621,6 +621,7 @@ export default function App() {
   const [cmProfile, setCmProfile] = useState(null);
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showNewClient, setShowNewClient] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
   const [newClient, setNewClient] = useState({ name: "", email: "", color: "#2A8FA8", reseaux: [] });
@@ -896,11 +897,14 @@ export default function App() {
         <FloralCorner style={{ width: 140, top: -25, right: 50 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
           <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2A8FA8", boxShadow: `0 0 12px ${C.accentGlow}` }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#E0F8FF", letterSpacing: -0.5 }}>
-            {isClient ? "Mon espace" : cmProfile?.name ? `Espace ${cmProfile.name}` : "petit bout de com"}
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#0A2E3F", letterSpacing: -0.5 }}>
+            {isClient ? "Mon espace" : cmProfile?.name ? `Espace CM — ${cmProfile.name}` : "Espace CM"}
           </span>
           {isClient && selClient && <span style={{ fontSize: 12, color: "#4A9BB0", fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
           {loading && <span style={{ fontSize: 10, color: C.muted, marginLeft: 8, animation: "pulse 1s infinite" }}>⟳ Chargement...</span>}
+          <button onClick={() => setSidebarOpen(o => !o)} style={{ marginLeft: 8, padding: "5px 8px", border: `1px solid ${C.border}`, borderRadius: 8, backgroundColor: "transparent", color: C.muted, fontSize: 16, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center" }} title="Menu">
+            {sidebarOpen ? "☰" : "☰"}
+          </button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, zIndex: 1 }}>
           <span style={{ fontSize: 11, color: C.muted }}>{authUser?.email}</span>
@@ -915,7 +919,7 @@ export default function App() {
 
       <div style={{ display: "flex", minHeight: "calc(100vh - 58px)" }}>
         {/* ─── SIDEBAR ─── */}
-        <div style={{ width: 218, background: "#0A2E3F", border: "none", padding: "14px 0", flexShrink: 0, boxShadow: "4px 0 20px rgba(0,0,0,0.18)" }}>
+        <div style={{ width: sidebarOpen ? 218 : 0, minWidth: sidebarOpen ? 218 : 0, background: "#0A2E3F", border: "none", padding: sidebarOpen ? "14px 0" : 0, flexShrink: 0, boxShadow: "4px 0 20px rgba(0,0,0,0.18)", overflow: "hidden", transition: "all .25s ease" }}>
           <div style={{ marginBottom: 16 }}>
             {tabs.map(t => (
               <button key={t.id} onClick={() => { setTab(t.id); setCalSel(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 18px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 600 : 400, backgroundColor: tab === t.id ? "rgba(42,143,168,0.2)" : "transparent", color: tab === t.id ? "#7CCFDF" : "#5BAFC0", borderLeft: tab === t.id ? "3px solid #7CCFDF" : "3px solid transparent", transition: "all .15s" }}>
@@ -969,7 +973,7 @@ export default function App() {
                 <p style={{ fontSize: 15, color: C.textSoft, marginBottom: 6, fontWeight: 500 }}>Bienvenue dans ton espace de gestion.</p>
                 <p style={{ fontSize: 13, color: C.muted }}>
                   {stats.pending > 0
-                    ? <><strong style={{ color: C.orange, fontWeight: 700 }}>{stats.pending} post{stats.pending > 1 ? "s" : ""} en attente</strong> de validation aujourd'hui</>
+                    ? <>Tu as <strong style={{ color: C.orange, fontWeight: 700 }}>{stats.pending} post{stats.pending > 1 ? "s" : ""}</strong> en attente de validation à ce jour.</>
                     : <span style={{ color: C.green }}>Tout est à jour, aucun post en attente ✓</span>
                   }
                 </p>
