@@ -804,41 +804,35 @@ export default function App() {
   const isClient = viewMode === "client";
 
   const handleCreateClient = async () => {
-    if (!newClient.name.trim()) return;
+    if (!newClient.name.trim() || !newClient.email.trim() || !newClient.motDePasse.trim()) return;
     setSaving(true);
     try {
-      // 1. Créer dans Airtable avec tous les champs
+      // 1. Créer le compte Supabase Auth via fonction serverless
+      const authRes = await fetch("/api/create-client-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: newClient.email,
+          password: newClient.motDePasse,
+          clientName: newClient.name,
+        }),
+      });
+      const authData = await authRes.json();
+      if (!authRes.ok) throw new Error(authData.error || "Erreur création compte");
+
+      // 2. Créer dans Airtable avec tous les champs + supabaseId
       const res = await createClient({
         name: newClient.name,
         prenom: newClient.prenom,
         nom: newClient.nom,
         email: newClient.email,
+        motDePasse: newClient.motDePasse,
         telephone: newClient.telephone,
         adresse: newClient.adresse,
         color: newClient.color,
         reseaux: newClient.reseaux,
+        supabaseId: authData.userId,
       });
-
-      // 2. Inviter via Supabase Auth si email renseigné
-      if (newClient.email) {
-        try {
-          const { error: invErr } = await supabase.auth.signInWithOtp({
-            email: newClient.email,
-            options: {
-              shouldCreateUser: true,
-              emailRedirectTo: window.location.origin,
-              data: { client_name: newClient.name, airtable_id: res.id }
-            }
-          });
-          if (!invErr) fire("📧 Invitation envoyée à " + newClient.email);
-          else fire("⚠️ Client créé, email d'invitation non envoyé");
-        } catch(invErr) {
-          console.warn("Invitation:", invErr);
-          fire("⚠️ Client créé, email d'invitation non envoyé");
-        }
-      } else {
-        fire("✅ Client créé !");
-      }
 
       const created = {
         id: res.id, airtableId: res.id,
@@ -850,8 +844,9 @@ export default function App() {
       };
       setClients(c => [...c, created]);
       setShowNewClient(false);
-      setNewClient({ name: "", prenom: "", nom: "", email: "", telephone: "", adresse: "", color: "#2A8FA8", reseaux: [] });
-    } catch(e) { console.error(e); fire("❌ Erreur création client", "err"); }
+      setNewClient({ name: "", prenom: "", nom: "", email: "", motDePasse: "", telephone: "", adresse: "", color: "#2A8FA8", reseaux: [] });
+      fire("✅ Client créé ! Accès : " + newClient.email);
+    } catch(e) { console.error(e); fire("❌ " + e.message, "err"); }
     setSaving(false);
   };
 
@@ -1623,12 +1618,18 @@ export default function App() {
 
               {/* Contact */}
               <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>📬 Contact</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>📬 Contact & accès</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div>
-                    <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Email *</label>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Email * <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(identifiant de connexion)</span></label>
                     <input value={newClient.email} onChange={e => setNewClient(n => ({...n, email: e.target.value}))} placeholder="client@email.com" type="email"
                       style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.card, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Mot de passe * <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(à communiquer au client)</span></label>
+                    <input value={newClient.motDePasse} onChange={e => setNewClient(n => ({...n, motDePasse: e.target.value}))} placeholder="Ex: Lumiere2026!"
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.card, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+                    <p style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>💡 Conseillé : nom du client + année + caractère spécial</p>
                   </div>
                   <div>
                     <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Téléphone</label>
@@ -1670,12 +1671,12 @@ export default function App() {
             </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-              <button onClick={handleCreateClient} disabled={saving || !newClient.name.trim() || !newClient.email.trim()} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer", opacity: (!newClient.name.trim() || !newClient.email.trim()) ? .5 : 1 }}>
-                {saving ? "Création..." : "✉️ Créer & envoyer l'invitation"}
+              <button onClick={handleCreateClient} disabled={saving || !newClient.name.trim() || !newClient.email.trim() || !newClient.motDePasse.trim()} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer", opacity: (!newClient.name.trim() || !newClient.email.trim() || !newClient.motDePasse.trim()) ? .5 : 1 }}>
+                {saving ? "Création..." : "✅ Créer le client"}
               </button>
               <button onClick={() => setShowNewClient(false)} style={{ padding: "11px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
             </div>
-            <p style={{ fontSize: 11, color: C.muted, textAlign: "center", marginTop: 10 }}>Le client recevra un email pour créer son mot de passe.</p>
+            <p style={{ fontSize: 11, color: C.muted, textAlign: "center", marginTop: 10 }}>Le compte sera créé immédiatement. Communiquez l'email et le mot de passe au client.</p>
           </div>
         </div>
       )}

@@ -113,10 +113,12 @@ export async function createClient(data) {
       "Prénom": data.prenom || "",
       "Nom": data.nom || "",
       Email: data.email || "",
+      "Mot de passe": data.motDePasse || "",
       "Téléphone": data.telephone || "",
       "Adresse": data.adresse || "",
       Couleur: data.color,
       "Réseaux actifs": data.reseaux,
+      "Supabase ID": data.supabaseId || "",
     },
   });
 }
