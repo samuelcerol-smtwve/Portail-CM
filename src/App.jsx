@@ -1595,85 +1595,79 @@ export default function App() {
             <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, marginBottom: 4 }}>Nouveau client</h3>
             <p style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>Un email d'invitation sera envoyé automatiquement.</p>
 
-            {/* Séparateur section */}
-            {(() => {
-              const LBL = ({ children }) => <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>{children}</label>;
-              const INP = ({ value, onChange, placeholder, type = "text" }) => (
-                <input value={value} onChange={onChange} placeholder={placeholder} type={type}
-                  style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
-              );
-              return (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {/* Entreprise */}
-                  <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>🏢 Entreprise</div>
-                    <div>
-                      <LBL>Nom de l'entreprise *</LBL>
-                      <INP value={newClient.name} onChange={e => setNewClient(n => ({...n, name: e.target.value}))} placeholder="Ex: Café Lumière" />
-                    </div>
-                  </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Entreprise */}
+              <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>🏢 Entreprise</div>
+                <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Nom de l'entreprise *</label>
+                <input value={newClient.name} onChange={e => setNewClient(n => ({...n, name: e.target.value}))} placeholder="Ex: Café Lumière"
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.card, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+              </div>
 
-                  {/* Correspondant */}
-                  <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>👤 Correspondant <span style={{ fontWeight: 400, color: C.muted }}>(facultatif)</span></div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      <div>
-                        <LBL>Prénom</LBL>
-                        <INP value={newClient.prenom} onChange={e => setNewClient(n => ({...n, prenom: e.target.value}))} placeholder="Marie" />
-                      </div>
-                      <div>
-                        <LBL>Nom</LBL>
-                        <INP value={newClient.nom} onChange={e => setNewClient(n => ({...n, nom: e.target.value}))} placeholder="Dupont" />
-                      </div>
-                    </div>
+              {/* Correspondant */}
+              <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>👤 Correspondant <span style={{ fontWeight: 400, color: C.muted }}>(facultatif)</span></div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Prénom</label>
+                    <input value={newClient.prenom} onChange={e => setNewClient(n => ({...n, prenom: e.target.value}))} placeholder="Marie"
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.card, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
                   </div>
-
-                  {/* Contact */}
-                  <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>📬 Contact</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      <div>
-                        <LBL>Email *</LBL>
-                        <INP value={newClient.email} onChange={e => setNewClient(n => ({...n, email: e.target.value}))} placeholder="client@email.com" type="email" />
-                      </div>
-                      <div>
-                        <LBL>Téléphone</LBL>
-                        <INP value={newClient.telephone} onChange={e => setNewClient(n => ({...n, telephone: e.target.value}))} placeholder="+33 6 00 00 00 00" type="tel" />
-                      </div>
-                      <div>
-                        <LBL>Adresse</LBL>
-                        <INP value={newClient.adresse} onChange={e => setNewClient(n => ({...n, adresse: e.target.value}))} placeholder="12 rue des Fleurs, 75001 Paris" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Réseaux & couleur */}
-                  <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>🎨 Identité portail</div>
-                    <div style={{ marginBottom: 12 }}>
-                      <LBL>Réseaux actifs</LBL>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        {["Instagram","Facebook","LinkedIn","TikTok"].map(r => (
-                          <button key={r} onClick={() => setNewClient(n => ({ ...n, reseaux: n.reseaux.includes(r) ? n.reseaux.filter(x => x !== r) : [...n.reseaux, r] }))}
-                            style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${newClient.reseaux.includes(r) ? C.accent : C.border}`, backgroundColor: newClient.reseaux.includes(r) ? C.accentSoft : "transparent", color: newClient.reseaux.includes(r) ? C.accent : C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                            {r}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <LBL>Couleur avatar</LBL>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        {["#2A8FA8","#4A9E62","#C8A06A","#D4886B","#5B8EC4","#1E6E84","#D45B5B","#7CCFDF","#9B59B6","#E67E22"].map(col => (
-                          <button key={col} onClick={() => setNewClient(n => ({...n, color: col}))}
-                            style={{ width: 28, height: 28, borderRadius: "50%", backgroundColor: col, border: newClient.color === col ? `3px solid ${C.text}` : "3px solid transparent", cursor: "pointer", transition: "border .15s" }} />
-                        ))}
-                      </div>
-                    </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Nom</label>
+                    <input value={newClient.nom} onChange={e => setNewClient(n => ({...n, nom: e.target.value}))} placeholder="Dupont"
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.card, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
                   </div>
                 </div>
-              );
-            })()}
+              </div>
+
+              {/* Contact */}
+              <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>📬 Contact</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Email *</label>
+                    <input value={newClient.email} onChange={e => setNewClient(n => ({...n, email: e.target.value}))} placeholder="client@email.com" type="email"
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.card, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Téléphone</label>
+                    <input value={newClient.telephone} onChange={e => setNewClient(n => ({...n, telephone: e.target.value}))} placeholder="+33 6 00 00 00 00" type="tel"
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.card, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Adresse</label>
+                    <input value={newClient.adresse} onChange={e => setNewClient(n => ({...n, adresse: e.target.value}))} placeholder="12 rue des Fleurs, 75001 Paris"
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.card, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Réseaux & couleur */}
+              <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>🎨 Identité portail</div>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Réseaux actifs</label>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {["Instagram","Facebook","LinkedIn","TikTok"].map(r => (
+                      <button key={r} onClick={() => setNewClient(n => ({ ...n, reseaux: n.reseaux.includes(r) ? n.reseaux.filter(x => x !== r) : [...n.reseaux, r] }))}
+                        style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${newClient.reseaux.includes(r) ? C.accent : C.border}`, backgroundColor: newClient.reseaux.includes(r) ? C.accentSoft : "transparent", color: newClient.reseaux.includes(r) ? C.accent : C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>Couleur avatar</label>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {["#2A8FA8","#4A9E62","#C8A06A","#D4886B","#5B8EC4","#1E6E84","#D45B5B","#7CCFDF","#9B59B6","#E67E22"].map(col => (
+                      <button key={col} onClick={() => setNewClient(n => ({...n, color: col}))}
+                        style={{ width: 28, height: 28, borderRadius: "50%", backgroundColor: col, border: newClient.color === col ? `3px solid ${C.text}` : "3px solid transparent", cursor: "pointer", transition: "border .15s" }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
               <button onClick={handleCreateClient} disabled={saving || !newClient.name.trim() || !newClient.email.trim()} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer", opacity: (!newClient.name.trim() || !newClient.email.trim()) ? .5 : 1 }}>
