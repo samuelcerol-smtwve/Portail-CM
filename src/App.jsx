@@ -454,30 +454,51 @@ function PostCard({ post, client, onApprove, onApproveVisual, onRevision, isClie
 }
 
 // ─── CALENDAR ───
+const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
 function Calendar({ posts, onSelect, selectedId }) {
-  const firstDay = new Date(2026, 2, 1).getDay();
-  const daysInMonth = 31;
+  const today = new Date();
+  const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
   const offset = firstDay === 0 ? 6 : firstDay - 1;
-  const calDays = useMemo(() => { const d = []; for (let i = 0; i < offset; i++) d.push(null); for (let i = 1; i <= daysInMonth; i++) d.push(i); return d; }, []);
-  const byDay = {}; posts.forEach(p => { if (!byDay[p.day]) byDay[p.day] = []; byDay[p.day].push(p); });
+  const calDays = useMemo(() => { const d = []; for (let i = 0; i < offset; i++) d.push(null); for (let i = 1; i <= daysInMonth; i++) d.push(i); return d; }, [year, month]);
+  const byDay = {};
+  posts.forEach(p => {
+    if (!p.date) return;
+    const d = new Date(p.date);
+    if (d.getFullYear() === year && d.getMonth() === month) { const day = d.getDate(); if (!byDay[day]) byDay[day] = []; byDay[day].push(p); }
+  });
 
   return (
     <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} style={{ padding: "5px 14px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 16, cursor: "pointer" }}>‹</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{MONTHS_FR[month]} {year}</span>
+          {!isCurrentMonth && <button onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))} style={{ padding: "3px 10px", borderRadius: 20, border: `1px solid ${C.accent}40`, backgroundColor: C.accentSoft, color: C.accent, fontSize: 10, fontWeight: 600, cursor: "pointer" }}>Aujourd'hui</button>}
+        </div>
+        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} style={{ padding: "5px 14px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 16, cursor: "pointer" }}>›</button>
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 1, marginBottom: 1 }}>
         {DAYS_LABELS.map(d => <div key={d} style={{ padding: "6px 0", textAlign: "center", fontSize: 10, fontWeight: 600, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>{d}</div>)}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 1, backgroundColor: C.border + "66", borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border}` }}>
         {calDays.map((day, i) => {
           const dp = day ? (byDay[day] || []) : [];
-          const isToday = day === 22;
+          const isToday = isCurrentMonth && day === today.getDate();
+          const isPast = day && new Date(year, month, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
           return (
             <div key={i} style={{ minHeight: 78, padding: 5, backgroundColor: day ? C.card : C.bgLight }}>
               {day && <>
-                <div style={{ fontSize: 10, fontWeight: isToday ? 700 : 400, color: isToday ? "#fff" : (day < 22 ? C.text : C.muted), marginBottom: 3, ...(isToday ? { backgroundColor: C.accent, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 } : {}) }}>{day}</div>
+                <div style={{ fontSize: 10, fontWeight: isToday ? 700 : 400, color: isToday ? "#fff" : isPast ? C.muted : C.text, marginBottom: 3, ...(isToday ? { backgroundColor: C.accent, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 } : {}) }}>{day}</div>
                 {dp.map(p => (
-                  <button key={p.id} onClick={() => onSelect(p.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 3, padding: "2px 4px", marginBottom: 1, borderRadius: 5, border: selectedId === p.id ? `1px solid ${C.accent}` : `1px solid transparent`, backgroundColor: selectedId === p.id ? C.accentSoft : STATUSES[p.status].bg, cursor: "pointer", fontSize: 9, color: C.text, textAlign: "left", transition: "all .1s" }}>
-                    <Dot color={STATUSES[p.status].color} pulse={p.status === "late"} />
-                    <span style={{ fontWeight: 500 }}>{NETWORKS[p.network].short}</span>
+                  <button key={p.id} onClick={() => onSelect(p.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 3, padding: "2px 4px", marginBottom: 1, borderRadius: 5, border: selectedId === p.id ? `1px solid ${C.accent}` : `1px solid transparent`, backgroundColor: selectedId === p.id ? C.accentSoft : STATUSES[p.status]?.bg || C.bgLight, cursor: "pointer", fontSize: 9, color: C.text, textAlign: "left", transition: "all .1s" }}>
+                    <Dot color={STATUSES[p.status]?.color || C.muted} pulse={p.status === "late"} />
+                    <span style={{ fontWeight: 500 }}>{NETWORKS[p.network]?.short || "?"}</span>
                   </button>
                 ))}
               </>}
@@ -1020,7 +1041,7 @@ export default function App() {
           {tab === "calendar" && (
             <div style={{ animation: "fadeIn .3s ease" }}>
               <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 4 }}>{isClient ? "Mon calendrier" : "Calendrier"}</h2>
-              <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Mars 2026{selClient && !isClient ? ` — ${clients.find(c => c.id === selClient)?.name}` : ""}</p>
+              {selClient && !isClient && <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{clients.find(c => c.id === selClient)?.name}</p>}
               <div style={{ display: "flex", gap: 20 }}>
                 <div style={{ flex: 1 }}><Calendar posts={visible} onSelect={setCalSel} selectedId={calSel} /></div>
                 <div style={{ width: 290, flexShrink: 0 }}>
@@ -1060,7 +1081,7 @@ export default function App() {
                   </button>
                 )}
               </div>
-              <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{selClient ? clients.find(c => c.id === selClient)?.name : "Tous"} — Mars 2026</p>
+              <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{selClient ? clients.find(c => c.id === selClient)?.name : "Tous"}</p>
               {isClient && <div style={{ padding: "10px 14px", borderRadius: 12, marginBottom: 16, backgroundColor: C.accentSoft, border: `1px solid ${C.accent}25`, fontSize: 12, color: C.textSoft }}>💡 <strong style={{ color: C.accent }}>Validez</strong> ou <strong style={{ color: C.accent }}>demandez une modification</strong>. Notification instantanée.</div>}
               {isClient ? (() => {
                 const ORDER = ["late","pending_text","pending_visual","pending","revision","approved","published","draft"];
