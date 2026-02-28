@@ -624,7 +624,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showNewClient, setShowNewClient] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
-  const [newClient, setNewClient] = useState({ name: "", email: "", color: "#2A8FA8", reseaux: [] });
+  const [newClient, setNewClient] = useState({ name: "", prenom: "", nom: "", email: "", telephone: "", adresse: "", color: "#2A8FA8", reseaux: [] });
   const [newPost, setNewPost] = useState({ caption: "", network: "instagram", date: "", status: "pending_text", img: "", contentType: "image" });
   const [imgPreview, setImgPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -807,19 +807,50 @@ export default function App() {
     if (!newClient.name.trim()) return;
     setSaving(true);
     try {
+      // 1. Créer dans Airtable avec tous les champs
       const res = await createClient({
-        name: newClient.name, email: newClient.email, color: newClient.color,
-        reseaux: newClient.reseaux, loginPortail: newClient.email, motDePasse: "client123"
+        name: newClient.name,
+        prenom: newClient.prenom,
+        nom: newClient.nom,
+        email: newClient.email,
+        telephone: newClient.telephone,
+        adresse: newClient.adresse,
+        color: newClient.color,
+        reseaux: newClient.reseaux,
       });
+
+      // 2. Inviter via Supabase Auth si email renseigné
+      if (newClient.email) {
+        try {
+          const { error: invErr } = await supabase.auth.signInWithOtp({
+            email: newClient.email,
+            options: {
+              shouldCreateUser: true,
+              emailRedirectTo: window.location.origin,
+              data: { client_name: newClient.name, airtable_id: res.id }
+            }
+          });
+          if (!invErr) fire("📧 Invitation envoyée à " + newClient.email);
+          else fire("⚠️ Client créé, email d'invitation non envoyé");
+        } catch(invErr) {
+          console.warn("Invitation:", invErr);
+          fire("⚠️ Client créé, email d'invitation non envoyé");
+        }
+      } else {
+        fire("✅ Client créé !");
+      }
+
       const created = {
-        id: res.id, airtableId: res.id, name: newClient.name, email: newClient.email,
+        id: res.id, airtableId: res.id,
+        name: newClient.name, email: newClient.email,
+        prenom: newClient.prenom, nom: newClient.nom,
+        telephone: newClient.telephone, adresse: newClient.adresse,
         color: newClient.color, reseaux: newClient.reseaux,
         initials: newClient.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2),
       };
       setClients(c => [...c, created]);
       setShowNewClient(false);
-      setNewClient({ name: "", email: "", color: "#2A8FA8", reseaux: [] });
-      fire("✅ Client créé !");
+      setNewClient({ name: "", prenom: "", nom: "", email: "", telephone: "", adresse: "", color: "#2A8FA8", reseaux: [] });
     } catch(e) { console.error(e); fire("❌ Erreur création client", "err"); }
     setSaving(false);
   };
@@ -1560,42 +1591,97 @@ export default function App() {
       {/* MODAL NOUVEAU CLIENT */}
       {showNewClient && (
         <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, animation: "fadeIn .2s ease" }} onClick={() => setShowNewClient(false)}>
-          <div style={{ backgroundColor: C.card, borderRadius: 20, padding: 28, width: 400, boxShadow: "0 20px 60px rgba(0,0,0,.15)", animation: "fadeIn .2s ease" }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, marginBottom: 20 }}>Nouveau client</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Nom *</label>
-                <input value={newClient.name} onChange={e => setNewClient(n => ({...n, name: e.target.value}))} placeholder="Ex: Café Lumière" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit" }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Email</label>
-                <input value={newClient.email} onChange={e => setNewClient(n => ({...n, email: e.target.value}))} placeholder="client@email.com" type="email" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit" }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Couleur</label>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {["#2A8FA8","#4A9E62","#C8A06A","#D4886B","#5B8EC4","#1E6E84","#D45B5B","#7CCFDF"].map(col => (
-                    <button key={col} onClick={() => setNewClient(n => ({...n, color: col}))} style={{ width: 28, height: 28, borderRadius: "50%", backgroundColor: col, border: newClient.color === col ? `3px solid ${C.text}` : "3px solid transparent", cursor: "pointer", transition: "border .15s" }} />
-                  ))}
+          <div style={{ backgroundColor: C.card, borderRadius: 20, padding: 28, width: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.15)", animation: "fadeIn .2s ease" }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, marginBottom: 4 }}>Nouveau client</h3>
+            <p style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>Un email d'invitation sera envoyé automatiquement.</p>
+
+            {/* Séparateur section */}
+            {(() => {
+              const LBL = ({ children }) => <label style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 5 }}>{children}</label>;
+              const INP = ({ value, onChange, placeholder, type = "text" }) => (
+                <input value={value} onChange={onChange} placeholder={placeholder} type={type}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+              );
+              return (
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {/* Entreprise */}
+                  <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>🏢 Entreprise</div>
+                    <div>
+                      <LBL>Nom de l'entreprise *</LBL>
+                      <INP value={newClient.name} onChange={e => setNewClient(n => ({...n, name: e.target.value}))} placeholder="Ex: Café Lumière" />
+                    </div>
+                  </div>
+
+                  {/* Correspondant */}
+                  <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>👤 Correspondant <span style={{ fontWeight: 400, color: C.muted }}>(facultatif)</span></div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div>
+                        <LBL>Prénom</LBL>
+                        <INP value={newClient.prenom} onChange={e => setNewClient(n => ({...n, prenom: e.target.value}))} placeholder="Marie" />
+                      </div>
+                      <div>
+                        <LBL>Nom</LBL>
+                        <INP value={newClient.nom} onChange={e => setNewClient(n => ({...n, nom: e.target.value}))} placeholder="Dupont" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact */}
+                  <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>📬 Contact</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div>
+                        <LBL>Email *</LBL>
+                        <INP value={newClient.email} onChange={e => setNewClient(n => ({...n, email: e.target.value}))} placeholder="client@email.com" type="email" />
+                      </div>
+                      <div>
+                        <LBL>Téléphone</LBL>
+                        <INP value={newClient.telephone} onChange={e => setNewClient(n => ({...n, telephone: e.target.value}))} placeholder="+33 6 00 00 00 00" type="tel" />
+                      </div>
+                      <div>
+                        <LBL>Adresse</LBL>
+                        <INP value={newClient.adresse} onChange={e => setNewClient(n => ({...n, adresse: e.target.value}))} placeholder="12 rue des Fleurs, 75001 Paris" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Réseaux & couleur */}
+                  <div style={{ padding: "12px 14px", borderRadius: 12, backgroundColor: C.bgLight, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>🎨 Identité portail</div>
+                    <div style={{ marginBottom: 12 }}>
+                      <LBL>Réseaux actifs</LBL>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {["Instagram","Facebook","LinkedIn","TikTok"].map(r => (
+                          <button key={r} onClick={() => setNewClient(n => ({ ...n, reseaux: n.reseaux.includes(r) ? n.reseaux.filter(x => x !== r) : [...n.reseaux, r] }))}
+                            style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${newClient.reseaux.includes(r) ? C.accent : C.border}`, backgroundColor: newClient.reseaux.includes(r) ? C.accentSoft : "transparent", color: newClient.reseaux.includes(r) ? C.accent : C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                            {r}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <LBL>Couleur avatar</LBL>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {["#2A8FA8","#4A9E62","#C8A06A","#D4886B","#5B8EC4","#1E6E84","#D45B5B","#7CCFDF","#9B59B6","#E67E22"].map(col => (
+                          <button key={col} onClick={() => setNewClient(n => ({...n, color: col}))}
+                            style={{ width: 28, height: 28, borderRadius: "50%", backgroundColor: col, border: newClient.color === col ? `3px solid ${C.text}` : "3px solid transparent", cursor: "pointer", transition: "border .15s" }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Réseaux actifs</label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {["Instagram","Facebook","LinkedIn"].map(r => (
-                    <button key={r} onClick={() => setNewClient(n => ({ ...n, reseaux: n.reseaux.includes(r) ? n.reseaux.filter(x => x !== r) : [...n.reseaux, r] }))} style={{ padding: "6px 12px", borderRadius: 20, border: `1.5px solid ${newClient.reseaux.includes(r) ? C.accent : C.border}`, backgroundColor: newClient.reseaux.includes(r) ? C.accentSoft : "transparent", color: newClient.reseaux.includes(r) ? C.accent : C.muted, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+              );
+            })()}
+
             <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
-              <button onClick={handleCreateClient} disabled={saving || !newClient.name.trim()} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer", opacity: !newClient.name.trim() ? .5 : 1 }}>
-                {saving ? "Création..." : "Créer le client"}
+              <button onClick={handleCreateClient} disabled={saving || !newClient.name.trim() || !newClient.email.trim()} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: saving ? "wait" : "pointer", opacity: (!newClient.name.trim() || !newClient.email.trim()) ? .5 : 1 }}>
+                {saving ? "Création..." : "✉️ Créer & envoyer l'invitation"}
               </button>
               <button onClick={() => setShowNewClient(false)} style={{ padding: "11px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
             </div>
+            <p style={{ fontSize: 11, color: C.muted, textAlign: "center", marginTop: 10 }}>Le client recevra un email pour créer son mot de passe.</p>
           </div>
         </div>
       )}

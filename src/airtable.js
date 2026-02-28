@@ -82,12 +82,15 @@ export async function getClients() {
     id: r.id,
     airtableId: r.id,
     name: r.fields["Name"] || "Sans nom",
+    prenom: r.fields["Prénom"] || "",
+    nom: r.fields["Nom"] || "",
     email: r.fields["Email"] || "",
+    telephone: r.fields["Téléphone"] || "",
+    adresse: r.fields["Adresse"] || "",
     color: r.fields["Couleur"] || COLORS[i % COLORS.length],
     initials: (r.fields["Name"] || "??").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2),
-    loginPortail: r.fields["Login portail"] || "",
-    motDePasse: r.fields["Mot de passe"] || "",
     reseaux: r.fields["Réseaux actifs"] || [],
+    supabaseId: r.fields["Supabase ID"] || "",
   }));
 }
 
@@ -107,10 +110,12 @@ export async function createClient(data) {
   return proxyPost("Clients", {
     fields: {
       Name: data.name,
-      Email: data.email,
+      "Prénom": data.prenom || "",
+      "Nom": data.nom || "",
+      Email: data.email || "",
+      "Téléphone": data.telephone || "",
+      "Adresse": data.adresse || "",
       Couleur: data.color,
-      "Login portail": data.loginPortail,
-      "Mot de passe": data.motDePasse,
       "Réseaux actifs": data.reseaux,
     },
   });
