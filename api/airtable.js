@@ -1,67 +1,245 @@
-// ─── VERCEL SERVERLESS PROXY POUR AIRTABLE ───
-// Les secrets restent côté serveur (pas de préfixe VITE_)
+// ─── SERVICE AIRTABLE (via proxy /api/airtable) ───
+// Les credentials sont passés dynamiquement via headers
+// pour supporter plusieurs CM avec des bases différentes
 
-const API_KEY = process.env.AIRTABLE_API_KEY;
-const BASE_ID = process.env.AIRTABLE_BASE_ID;
-const BASE_URL = `https://api.airtable.com/v0/${BASE_ID}`;
+const PROXY = "/api/airtable";
+const COLORS = ["#2A8FA8", "#1E6E84", "#4A9E62", "#C8A06A", "#5B8EC4", "#D4886B"];
 
-const ALLOWED_TABLES = ["Clients", "Posts", "Factures", "Strategie"];
+// Credentials de la CM connectée — initialisés au login
+let _apiKey = null;
+let _baseId = null;
 
-export default async function handler(req, res) {
-  // ─── CORS (utile pour le dev local) ───
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.status(200).end();
+export function setAirtableCredentials(apiKey, baseId) {
+  _apiKey = apiKey;
+  _baseId = baseId;
+}
 
-  // ─── VALIDATION ───
-  if (!API_KEY || !BASE_ID) {
-    return res.status(500).json({ error: "Airtable credentials not configured on server" });
-  }
+export function clearAirtableCredentials() {
+  _apiKey = null;
+  _baseId = null;
+}
 
-  const { table, recordId } = req.query;
+function getHeaders() {
+  if (!_apiKey || !_baseId) throw new Error("Credentials Airtable non initialisés");
+  return {
+    "Content-Type": "application/json",
+    "x-airtable-key": _apiKey,
+    "x-airtable-base": _baseId,
+  };
+}
 
-  if (!table || !ALLOWED_TABLES.includes(table)) {
-    return res.status(400).json({ error: `Invalid table. Allowed: ${ALLOWED_TABLES.join(", ")}` });
-  }
-
-  // ─── CONSTRUIRE L'URL AIRTABLE ───
-  let url = `${BASE_URL}/${encodeURIComponent(table)}`;
-  if (recordId) url += `/${recordId}`;
-
-  // Transférer les query params (sauf table/recordId) vers Airtable
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(req.query)) {
-    if (key !== "table" && key !== "recordId") {
-      params.append(key, value);
+// ─── HELPER ───
+async function fetchAll(table, params = "") {
+  let records = [];
+  let offset = null;
+  do {
+    const sep = params ? "&" : "?";
+    const offsetParam = offset ? `&offset=${offset}` : "";
+    const url = `${PROXY}?table=${encodeURIComponent(table)}${params ? "&" + params : ""}${offsetParam}`;
+    const res = await fetch(url, { headers: getHeaders() });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = typeof err.error === "string" ? err.error : err.error?.message || `Proxy error: ${res.status}`;
+      throw new Error(msg);
     }
+    const data = await res.json();
+    records = [...records, ...data.records];
+    offset = data.offset;
+  } while (offset);
+  return records;
+}
+
+async function proxyPost(table, body) {
+  const res = await fetch(`${PROXY}?table=${encodeURIComponent(table)}`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Proxy error: ${res.status}`);
   }
-  const qs = params.toString();
-  if (qs) url += `?${qs}`;
+  return res.json();
+}
 
-  // ─── PROXY LA REQUÊTE ───
-  try {
-    const options = {
-      method: req.method,
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-    };
-
-    if (req.method === "POST" || req.method === "PATCH") {
-      options.body = JSON.stringify(req.body);
-    }
-
-    const response = await fetch(url, options);
-    const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json(data);
-    }
-
-    return res.status(200).json(data);
-  } catch (error) {
-    return res.status(502).json({ error: "Failed to reach Airtable", details: error.message });
+async function proxyPatch(table, recordId, body) {
+  const res = await fetch(`${PROXY}?table=${encodeURIComponent(table)}&recordId=${recordId}`, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Proxy error: ${res.status}`);
   }
+  return res.json();
+}
+
+// ─── CLIENTS ───
+export async function getClients() {
+  const records = await fetchAll("Clients");
+  return records.map((r, i) => ({
+    id: r.id,
+    airtableId: r.id,
+    name: r.fields["Name"] || "Sans nom",
+    email: r.fields["Email"] || "",
+    color: r.fields["Couleur"] || COLORS[i % COLORS.length],
+    initials: (r.fields["Name"] || "??").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2),
+    loginPortail: r.fields["Login portail"] || "",
+    motDePasse: r.fields["Mot de passe"] || "",
+    reseaux: r.fields["Réseaux actifs"] || [],
+  }));
+}
+
+export async function deleteClient(recordId) {
+  const res = await fetch(`${PROXY}?table=${encodeURIComponent("Clients")}&recordId=${recordId}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Proxy error: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function createClient(data) {
+  return proxyPost("Clients", {
+    fields: {
+      Name: data.name,
+      Email: data.email,
+      Couleur: data.color,
+      "Login portail": data.loginPortail,
+      "Mot de passe": data.motDePasse,
+      "Réseaux actifs": data.reseaux,
+    },
+  });
+}
+
+// ─── POSTS ───
+export async function getPosts() {
+  const records = await fetchAll("Posts", "sort[0][field]=Date%20de%20publication&sort[0][direction]=asc");
+  return records.map(r => ({
+    id: r.id,
+    airtableId: r.id,
+    clientId: r.fields["Client"]?.[0] || null,
+    network: (r.fields["Réseau"] || "instagram").toLowerCase(),
+    status: mapStatus(r.fields["Statut"]),
+    contentType: (r.fields["Type"] || "image").toLowerCase(),
+    day: r.fields["Date de publication"] ? new Date(r.fields["Date de publication"]).getDate() : 0,
+    date: r.fields["Date de publication"] || null,
+    caption: r.fields["Caption"] || "",
+    img: r.fields["Visuel URL"] || "",
+    hours: r.fields["Heures attente"] || 0,
+    comments: r.fields["Commentaire client"]
+      ? [{ author: "client", text: r.fields["Commentaire client"], date: "récemment" }]
+      : [],
+  }));
+}
+
+export async function deletePost(recordId) {
+  const res = await fetch(`${PROXY}?table=${encodeURIComponent("Posts")}&recordId=${recordId}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Proxy error: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function updatePostStatus(airtableId, status, comment = "") {
+  const fields = { Statut: mapStatusToAirtable(status) };
+  if (comment) fields["Commentaire client"] = comment;
+  return proxyPatch("Posts", airtableId, { fields });
+}
+
+export async function createPost(data) {
+  return proxyPost("Posts", {
+    fields: {
+      Caption: data.caption,
+      Client: [data.clientId],
+      Réseau: capitalize(data.network),
+      Type: capitalize(data.contentType || "image"),
+      "Date de publication": data.date,
+      Statut: mapStatusToAirtable(data.status || "draft"),
+      "Visuel URL": data.img || "",
+      "Heures attente": data.hours || 0,
+    },
+  });
+}
+
+// ─── FACTURES ───
+export async function getFactures(clientAirtableId = null) {
+  const filter = clientAirtableId
+    ? `filterByFormula=FIND("${clientAirtableId}",ARRAYJOIN({Client}))`
+    : "";
+  const records = await fetchAll("Factures", filter);
+  return records.map(r => ({
+    id: r.fields["Numéro"] || r.id,
+    airtableId: r.id,
+    clientId: r.fields["Client"]?.[0] || null,
+    date: r.fields["Date émission"] || "",
+    period: r.fields["Période"] || "",
+    amount: r.fields["Montant"] || 0,
+    status: mapInvStatus(r.fields["Statut"]),
+    paidDate: r.fields["Date paiement"] || null,
+    description: r.fields["Description"] || "",
+  }));
+}
+
+// ─── STRATEGIE ───
+export async function getStrategies() {
+  const records = await fetchAll("Strategie");
+  return records.map(r => ({
+    airtableId: r.id,
+    clientId: r.fields["Client"]?.[0] || null,
+    period: r.fields["Période"] || "",
+    objective: r.fields["Objectif"] || "",
+    audiences: r.fields["Audiences"] ? r.fields["Audiences"].split("\n").filter(Boolean) : [],
+    pillars: r.fields["Piliers"] ? JSON.parse(r.fields["Piliers"]) : [],
+    rhythm: r.fields["Rythme"] ? JSON.parse(r.fields["Rythme"]) : [],
+    kpis: r.fields["KPIs"] ? r.fields["KPIs"].split("\n").filter(Boolean) : [],
+    notes: r.fields["Notes"] || "",
+    lastUpdate: r.fields["Dernière MAJ"] || "",
+  }));
+}
+
+// ─── MAPPERS ───
+function mapStatus(airtableStatus) {
+  const map = {
+    "Brouillon": "draft",
+    "En attente": "pending",
+    "Validation texte": "pending_text",
+    "Validation visuel": "pending_visual",
+    "Validé": "approved",
+    "Modif demandée": "revision",
+    "En retard": "late",
+    "Publié": "published",
+  };
+  return map[airtableStatus] || "draft";
+}
+
+function mapStatusToAirtable(status) {
+  const map = {
+    draft: "Brouillon",
+    pending: "En attente",
+    pending_text: "Validation texte",
+    pending_visual: "Validation visuel",
+    approved: "Validé",
+    revision: "Modif demandée",
+    late: "En retard",
+    published: "Publié",
+  };
+  return map[status] || "Brouillon";
+}
+
+function mapInvStatus(s) {
+  const map = { "Payée": "paid", "En attente": "pending", "En retard": "overdue" };
+  return map[s] || "pending";
+}
+
+function capitalize(s) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
