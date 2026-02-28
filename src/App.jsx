@@ -868,7 +868,7 @@ export default function App() {
   const stats = { total: posts.length, pending: posts.filter(p => p.status === "pending").length, late: posts.filter(p => p.status === "late").length, approved: posts.filter(p => p.status === "approved").length, revision: posts.filter(p => p.status === "revision").length };
 
   const findClient = (id) => clients.find(c => c.id === id || c.airtableId === id);
-  const cmTabs = [{ id: "dashboard", icon: "📊", label: "Dashboard" }, { id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Posts" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Facturation" }, { id: "strategy", icon: "🎯", label: "Stratégie" }, { id: "workflows", icon: "🔔", label: "Relances clients" }, { id: "schema", icon: "🗄️", label: "Airtable" }];
+  const cmTabs = [{ id: "dashboard", icon: "📊", label: "Dashboard" }, { id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Posts" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Facturation" }, { id: "strategy", icon: "🎯", label: "Stratégie" }, { id: "workflows", icon: "🔔", label: "Relances clients" }];
   const clientTabs = [{ id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Contenus" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Factures" }, { id: "strategy", icon: "🎯", label: "Stratégie" }];
   const tabs = isClient ? clientTabs : cmTabs;
 
