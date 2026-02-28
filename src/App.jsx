@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost, deleteClient, deletePost } from "./airtable.js";
-import { signIn, signOut, getSession, supabase } from "./supabase.js";
+import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost, deleteClient, deletePost, setAirtableCredentials, clearAirtableCredentials } from "./airtable.js";
+import { signIn, signOut, getSession, supabase, getCMCredentials } from "./supabase.js";
 
 // ─── UPLOAD IMAGE (Supabase Storage) ───
 async function uploadImage(file) {
@@ -597,6 +597,7 @@ export default function App() {
   const [strategies, setStrategies] = useState(STRATEGIES);
   const [loading, setLoading] = useState(true);
   const [airtableReady, setAirtableReady] = useState(false);
+  const [cmProfile, setCmProfile] = useState(null);
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
   const [showNewClient, setShowNewClient] = useState(false);
@@ -618,62 +619,101 @@ export default function App() {
       if (session?.user) setAuthUser(session.user);
       setAuthLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       setAuthUser(session?.user || null);
     });
     return () => subscription.unsubscribe();
   }, []);
 
+  const loadCMData = async (user) => {
+    try {
+      // Récupère les credentials Airtable de la CM depuis Supabase
+      const creds = await getCMCredentials(user.id);
+      setCmProfile(creds);
+      setAirtableCredentials(creds.airtable_api_key, creds.airtable_base_id);
+      // Charge les données Airtable de cette CM
+      setLoading(true);
+      const [cls, psts, facts, strats] = await Promise.all([
+        getClients(), getPosts(), getFactures(), getStrategies()
+      ]);
+      if (cls.length > 0) setClients(cls);
+      if (psts.length > 0) setPosts(psts);
+      if (facts.length > 0) {
+        const factsByClient = {};
+        facts.forEach(f => { if (!factsByClient[f.clientId]) factsByClient[f.clientId] = []; factsByClient[f.clientId].push(f); });
+        setFactures(factsByClient);
+      }
+      if (strats.length > 0) {
+        const stratsByClient = {};
+        strats.forEach(s => { stratsByClient[s.clientId] = s; });
+        setStrategies(stratsByClient);
+      }
+      setAirtableReady(true);
+    } catch (err) {
+      console.error("Erreur chargement CM:", err);
+      fire("⚠️ Erreur connexion Airtable", "err");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = async (email, password) => {
-    const user = await signIn(email, password);
-    setAuthUser(user);
-    setViewMode("client");
-    setTab("calendar");
-    // Trouver le client correspondant à cet email (après chargement Airtable)
-    const allClients = await getClients();
+    // Essaie d'abord de se connecter comme CM via Supabase
+    try {
+      const user = await signIn(email, password);
+      setAuthUser(user);
+      setViewMode("cm");
+      setTab("dashboard");
+      await loadCMData(user);
+      fire("👋 Bienvenue !");
+      return;
+    } catch (supabaseErr) {
+      // Pas une CM → essaie comme client Airtable
+    }
+    // Connexion client : vérifie email dans Airtable
+    const allClients = clients.length > 0 ? clients : await getClients().catch(() => []);
     const match = allClients.find(c =>
-      c.email?.toLowerCase() === email.toLowerCase() ||
-      c.loginPortail?.toLowerCase() === email.toLowerCase()
+      (c.email?.toLowerCase() === email.toLowerCase() ||
+      c.loginPortail?.toLowerCase() === email.toLowerCase()) &&
+      (c.motDePasse === password)
     );
     if (match) {
+      setAuthUser({ id: "client-" + match.id, email });
+      setViewMode("client");
+      setTab("calendar");
       setClients(prev => prev.some(c => c.id === match.id) ? prev : [...prev, match]);
       setSelClient(match.id);
+      fire("👋 Bienvenue !");
+    } else {
+      fire("❌ Email ou mot de passe incorrect", "err");
     }
   };
 
   const handleLogout = async () => {
     await signOut();
+    clearAirtableCredentials();
     setAuthUser(null);
+    setCmProfile(null);
     setViewMode("cm");
     setTab("dashboard");
+    setClients([]);
+    setPosts([]);
+    setFactures({});
+    setStrategies({});
+    setAirtableReady(false);
   };
 
-  // ─── CHARGER LES DONNÉES AIRTABLE (via proxy /api/airtable) ───
+  // ─── CHARGER LES DONNÉES AU DÉMARRAGE SI SESSION CM ACTIVE ───
   useEffect(() => {
-    setLoading(true);
-    Promise.all([getClients(), getPosts(), getFactures(), getStrategies()])
-      .then(([cls, psts, facts, strats]) => {
-        if (cls.length > 0) setClients(cls);
-        if (psts.length > 0) setPosts(psts);
-
-        // Factures par clientId
-        if (facts.length > 0) {
-          const factsByClient = {};
-          facts.forEach(f => { if (!factsByClient[f.clientId]) factsByClient[f.clientId] = []; factsByClient[f.clientId].push(f); });
-          setFactures(factsByClient);
-        }
-
-        // Stratégies par clientId
-        if (strats.length > 0) {
-          const stratsByClient = {};
-          strats.forEach(s => { stratsByClient[s.clientId] = s; });
-          setStrategies(stratsByClient);
-        }
-
-        setAirtableReady(true);
-      })
-      .catch(err => { console.error("Airtable error:", err); fire("⚠️ Erreur connexion Airtable", "err"); })
-      .finally(() => setLoading(false));
+    getSession().then(session => {
+      if (session?.user) {
+        setAuthUser(session.user);
+        setViewMode("cm");
+        loadCMData(session.user);
+      } else {
+        setLoading(false);
+      }
+    });
   }, []);
 
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 2500); return () => clearTimeout(t); } }, [toast]);
@@ -844,7 +884,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
           <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2A8FA8", boxShadow: `0 0 12px ${C.accentGlow}` }} />
           <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#E0F8FF", letterSpacing: -0.5 }}>
-            {isClient ? "Mon espace" : "petit bout de com"}
+            {isClient ? "Mon espace" : cmProfile?.name ? `Espace ${cmProfile.name}` : "petit bout de com"}
           </span>
           {isClient && selClient && <span style={{ fontSize: 12, color: "#4A9BB0", fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
           {loading && <span style={{ fontSize: 10, color: C.muted, marginLeft: 8, animation: "pulse 1s infinite" }}>⟳ Chargement...</span>}
@@ -920,7 +960,7 @@ export default function App() {
           {tab === "dashboard" && !isClient && (
             <div style={{ animation: "fadeIn .3s ease" }}>
               <div style={{ marginBottom: 28 }}>
-                <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 6, letterSpacing: -0.5 }}>Bonjour Elsa 👋</h2>
+                <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 6, letterSpacing: -0.5 }}>{cmProfile?.name ? `Bonjour ${cmProfile.name} 👋` : "Bonjour 👋"}</h2>
                 <p style={{ fontSize: 15, color: C.textSoft, marginBottom: 6, fontWeight: 500 }}>Bienvenue dans ton espace de gestion.</p>
                 <p style={{ fontSize: 13, color: C.muted }}>
                   {stats.pending > 0

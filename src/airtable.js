@@ -1,20 +1,42 @@
 // ─── SERVICE AIRTABLE (via proxy /api/airtable) ───
-// La clé API reste côté serveur — le client ne voit jamais le token
+// Les credentials sont passés dynamiquement via headers
+// pour supporter plusieurs CM avec des bases différentes
 
 const PROXY = "/api/airtable";
+const COLORS = ["#2A8FA8", "#1E6E84", "#4A9E62", "#C8A06A", "#5B8EC4", "#D4886B"];
 
-// ─── COULEURS PAR DÉFAUT ───
-const COLORS = ["#A78BFA", "#8B6EC0", "#4A9E62", "#C8A06A", "#5B8EC4", "#D4886B"];
+// Credentials de la CM connectée — initialisés au login
+let _apiKey = null;
+let _baseId = null;
+
+export function setAirtableCredentials(apiKey, baseId) {
+  _apiKey = apiKey;
+  _baseId = baseId;
+}
+
+export function clearAirtableCredentials() {
+  _apiKey = null;
+  _baseId = null;
+}
+
+function getHeaders() {
+  if (!_apiKey || !_baseId) throw new Error("Credentials Airtable non initialisés");
+  return {
+    "Content-Type": "application/json",
+    "x-airtable-key": _apiKey,
+    "x-airtable-base": _baseId,
+  };
+}
 
 // ─── HELPER ───
 async function fetchAll(table, params = "") {
   let records = [];
   let offset = null;
   do {
-    const sep = params ? "&" : "";
-    const offsetParam = offset ? `${sep}offset=${offset}` : "";
-    const url = `${PROXY}?table=${encodeURIComponent(table)}&${params}${offsetParam}`;
-    const res = await fetch(url);
+    const sep = params ? "&" : "?";
+    const offsetParam = offset ? `&offset=${offset}` : "";
+    const url = `${PROXY}?table=${encodeURIComponent(table)}${params ? "&" + params : ""}${offsetParam}`;
+    const res = await fetch(url, { headers: getHeaders() });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       const msg = typeof err.error === "string" ? err.error : err.error?.message || `Proxy error: ${res.status}`;
@@ -30,13 +52,12 @@ async function fetchAll(table, params = "") {
 async function proxyPost(table, body) {
   const res = await fetch(`${PROXY}?table=${encodeURIComponent(table)}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    const msg = typeof err.error === "string" ? err.error : err.error?.message || `Proxy error: ${res.status}`;
-    throw new Error(msg);
+    throw new Error(err.error?.message || `Proxy error: ${res.status}`);
   }
   return res.json();
 }
@@ -44,13 +65,12 @@ async function proxyPost(table, body) {
 async function proxyPatch(table, recordId, body) {
   const res = await fetch(`${PROXY}?table=${encodeURIComponent(table)}&recordId=${recordId}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    const msg = typeof err.error === "string" ? err.error : err.error?.message || `Proxy error: ${res.status}`;
-    throw new Error(msg);
+    throw new Error(err.error?.message || `Proxy error: ${res.status}`);
   }
   return res.json();
 }
@@ -74,6 +94,7 @@ export async function getClients() {
 export async function deleteClient(recordId) {
   const res = await fetch(`${PROXY}?table=${encodeURIComponent("Clients")}&recordId=${recordId}`, {
     method: "DELETE",
+    headers: getHeaders(),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -104,6 +125,7 @@ export async function getPosts() {
     clientId: r.fields["Client"]?.[0] || null,
     network: (r.fields["Réseau"] || "instagram").toLowerCase(),
     status: mapStatus(r.fields["Statut"]),
+    contentType: (r.fields["Type"] || "image").toLowerCase(),
     day: r.fields["Date de publication"] ? new Date(r.fields["Date de publication"]).getDate() : 0,
     date: r.fields["Date de publication"] || null,
     caption: r.fields["Caption"] || "",
@@ -118,6 +140,7 @@ export async function getPosts() {
 export async function deletePost(recordId) {
   const res = await fetch(`${PROXY}?table=${encodeURIComponent("Posts")}&recordId=${recordId}`, {
     method: "DELETE",
+    headers: getHeaders(),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -138,6 +161,7 @@ export async function createPost(data) {
       Caption: data.caption,
       Client: [data.clientId],
       Réseau: capitalize(data.network),
+      Type: capitalize(data.contentType || "image"),
       "Date de publication": data.date,
       Statut: mapStatusToAirtable(data.status || "draft"),
       "Visuel URL": data.img || "",
@@ -187,6 +211,8 @@ function mapStatus(airtableStatus) {
   const map = {
     "Brouillon": "draft",
     "En attente": "pending",
+    "Validation texte": "pending_text",
+    "Validation visuel": "pending_visual",
     "Validé": "approved",
     "Modif demandée": "revision",
     "En retard": "late",
@@ -199,6 +225,8 @@ function mapStatusToAirtable(status) {
   const map = {
     draft: "Brouillon",
     pending: "En attente",
+    pending_text: "Validation texte",
+    pending_visual: "Validation visuel",
     approved: "Validé",
     revision: "Modif demandée",
     late: "En retard",
