@@ -779,7 +779,20 @@ export default function App() {
     if (!confirmDelete) return;
     setSaving(true);
     try {
+      const client = clients.find(c => c.id === confirmDelete);
+
+      // 1. Supprimer dans Airtable
       await deleteClient(confirmDelete);
+
+      // 2. Supprimer le compte Supabase Auth si email connu
+      if (client?.email) {
+        await fetch("/api/delete-client-auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: client.email }),
+        }).catch(err => console.warn("Suppression Supabase échouée:", err));
+      }
+
       setClients(c => c.filter(x => x.id !== confirmDelete));
       setPosts(p => p.filter(x => x.clientId !== confirmDelete));
       if (selClient === confirmDelete) setSelClient(null);
