@@ -614,24 +614,11 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true); // clientId à supprimer
 
   // ─── AUTH SUPABASE ───
-  useEffect(() => {
-    getSession().then(session => {
-      if (session?.user) setAuthUser(session.user);
-      setAuthLoading(false);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
-      setAuthUser(session?.user || null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
   const loadCMData = async (user) => {
     try {
-      // Récupère les credentials Airtable de la CM depuis Supabase
       const creds = await getCMCredentials(user.id);
       setCmProfile(creds);
       setAirtableCredentials(creds.airtable_api_key, creds.airtable_base_id);
-      // Charge les données Airtable de cette CM
       setLoading(true);
       const [cls, psts, facts, strats] = await Promise.all([
         getClients(), getPosts(), getFactures(), getStrategies()
@@ -639,23 +626,38 @@ export default function App() {
       if (cls.length > 0) setClients(cls);
       if (psts.length > 0) setPosts(psts);
       if (facts.length > 0) {
-        const factsByClient = {};
-        facts.forEach(f => { if (!factsByClient[f.clientId]) factsByClient[f.clientId] = []; factsByClient[f.clientId].push(f); });
-        setFactures(factsByClient);
+        const fb = {};
+        facts.forEach(f => { if (!fb[f.clientId]) fb[f.clientId] = []; fb[f.clientId].push(f); });
+        setFactures(fb);
       }
       if (strats.length > 0) {
-        const stratsByClient = {};
-        strats.forEach(s => { stratsByClient[s.clientId] = s; });
-        setStrategies(stratsByClient);
+        const sb = {};
+        strats.forEach(s => { sb[s.clientId] = s; });
+        setStrategies(sb);
       }
       setAirtableReady(true);
     } catch (err) {
       console.error("Erreur chargement CM:", err);
-      fire("⚠️ Erreur connexion Airtable", "err");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    getSession().then(session => {
+      if (session?.user) {
+        setAuthUser(session.user);
+        setViewMode("cm");
+        loadCMData(session.user);
+      } else {
+        setLoading(false);
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      if (!session) setAuthUser(null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLogin = async (email, password) => {
     // Essaie d'abord de se connecter comme CM via Supabase
@@ -703,18 +705,7 @@ export default function App() {
     setAirtableReady(false);
   };
 
-  // ─── CHARGER LES DONNÉES AU DÉMARRAGE SI SESSION CM ACTIVE ───
-  useEffect(() => {
-    getSession().then(session => {
-      if (session?.user) {
-        setAuthUser(session.user);
-        setViewMode("cm");
-        loadCMData(session.user);
-      } else {
-        setLoading(false);
-      }
-    });
-  }, []);
+
 
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 2500); return () => clearTimeout(t); } }, [toast]);
   const fire = (msg, type) => setToast({ msg, type });
