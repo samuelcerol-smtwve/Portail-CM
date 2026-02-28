@@ -624,7 +624,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showNewClient, setShowNewClient] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
-  const [newClient, setNewClient] = useState({ name: "", prenom: "", nom: "", email: "", telephone: "", adresse: "", color: "#2A8FA8", reseaux: [] });
+  const [newClient, setNewClient] = useState({ name: "", prenom: "", nom: "", email: "", motDePasse: "", telephone: "", adresse: "", color: "#2A8FA8", reseaux: [] });
   const [newPost, setNewPost] = useState({ caption: "", network: "instagram", date: "", status: "pending_text", img: "", contentType: "image" });
   const [imgPreview, setImgPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
