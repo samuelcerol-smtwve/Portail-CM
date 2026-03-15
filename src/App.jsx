@@ -1379,13 +1379,61 @@ export default function App() {
                   }
                 </p>
               </div>
-              <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
                 <StatCard label="Total" value={stats.total} sub="ce mois" />
                 <StatCard label="En attente" value={stats.pending} accent={C.gold} sub="validation" />
                 <StatCard label="En retard" value={stats.late} accent={C.red} sub="relancé" />
                 <StatCard label="Validés" value={stats.approved} accent={C.green} sub="prêts" />
                 <StatCard label="Modifs" value={stats.revision} accent={C.orange} sub="à traiter" />
               </div>
+
+              {/* ─── Mini jauge CA ─── */}
+              {(() => {
+                const allInvoices = Object.values(factures).flat();
+                const caRealise = allInvoices.reduce((s, i) => s + i.amount, 0);
+                const encaisse = allInvoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
+                const pct = Math.min((caRealise / (objectifCA || 1)) * 100, 100);
+                const manque = Math.max(objectifCA - caRealise, 0);
+                return (
+                  <div style={{ backgroundColor: C.card, borderRadius: 14, padding: "14px 18px", border: `1px solid ${C.border}`, marginBottom: 22, position: "relative", overflow: "hidden" }}>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${C.accent}, ${C.lavender})` }} />
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8, marginBottom: 2 }}>Objectif mensuel</div>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                            <span style={{ fontSize: 20, fontWeight: 800, color: C.text }}>{(objectifCA || 0).toLocaleString()} €</span>
+                            <button onClick={() => setTab("billing")} style={{ fontSize: 10, color: C.accent, background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline" }}>voir détail</button>
+                          </div>
+                        </div>
+                        <div style={{ width: 1, height: 32, backgroundColor: C.border }} />
+                        <div>
+                          <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8, marginBottom: 2 }}>CA réalisé</div>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: pct >= 100 ? C.green : C.accent }}>{caRealise.toLocaleString()} €</span>
+                        </div>
+                        <div style={{ width: 1, height: 32, backgroundColor: C.border }} />
+                        <div>
+                          <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8, marginBottom: 2 }}>Encaissé</div>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: C.green }}>{encaisse.toLocaleString()} €</span>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: pct >= 100 ? C.green : C.accent }}>{Math.round(pct)}%</div>
+                        <div style={{ fontSize: 10, color: C.muted }}>de l'objectif</div>
+                      </div>
+                    </div>
+                    <div style={{ height: 10, borderRadius: 5, backgroundColor: C.bgLight, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 5, background: pct >= 100 ? `linear-gradient(90deg, ${C.green}, #6EE7A0)` : `linear-gradient(90deg, ${C.accent}, ${C.lavender})`, width: `${pct}%`, transition: "width .8s ease" }} />
+                    </div>
+                    <div style={{ marginTop: 6, fontSize: 11 }}>
+                      {pct >= 100
+                        ? <span style={{ color: C.green, fontWeight: 600 }}>🎉 Objectif atteint !</span>
+                        : <span style={{ color: C.muted }}>Il manque <strong style={{ color: C.orange }}>{manque.toLocaleString()} €</strong> pour atteindre l'objectif</span>
+                      }
+                    </div>
+                  </div>
+                );
+              })()}
               <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, color: C.textSoft }}>Par client</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 10, marginBottom: 22 }}>
                 {clients.map(cl => {
