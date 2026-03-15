@@ -473,58 +473,256 @@ function PostCard({ post, client, onApprove, onApproveVisual, onRevision, isClie
   );
 }
 
-// ─── CALENDAR ───
-const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+// ─── CALENDAR VIEW (avec filtres Posts / RDVs / Tout) ───
 
-function Calendar({ posts, onSelect, selectedId }) {
+function CalendarView({ posts, rdvs, clients, calSel, setCalSel, isClient, approve, revise, posts_all }) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [filter, setFilter] = useState("all"); // "all" | "posts" | "rdv"
+  const [selRdv, setSelRdv] = useState(null);
+
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
   const offset = firstDay === 0 ? 6 : firstDay - 1;
-  const calDays = useMemo(() => { const d = []; for (let i = 0; i < offset; i++) d.push(null); for (let i = 1; i <= daysInMonth; i++) d.push(i); return d; }, [year, month]);
-  const byDay = {};
-  posts.forEach(p => {
-    if (!p.date) return;
-    const d = new Date(p.date);
-    if (d.getFullYear() === year && d.getMonth() === month) { const day = d.getDate(); if (!byDay[day]) byDay[day] = []; byDay[day].push(p); }
-  });
+  const calDays = useMemo(() => {
+    const d = [];
+    for (let i = 0; i < offset; i++) d.push(null);
+    for (let i = 1; i <= daysInMonth; i++) d.push(i);
+    return d;
+  }, [year, month]);
+
+  // Posts par jour
+  const postsByDay = {};
+  if (filter !== "rdv") {
+    posts.forEach(p => {
+      if (!p.date) return;
+      const d = new Date(p.date);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate();
+        if (!postsByDay[day]) postsByDay[day] = [];
+        postsByDay[day].push(p);
+      }
+    });
+  }
+
+  // RDVs par jour
+  const rdvsByDay = {};
+  if (filter !== "posts") {
+    rdvs.forEach(r => {
+      if (!r.date) return;
+      const d = new Date(r.date);
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate();
+        if (!rdvsByDay[day]) rdvsByDay[day] = [];
+        rdvsByDay[day].push(r);
+      }
+    });
+  }
+
+  const selectedPost = calSel ? posts_all.find(x => x.id === calSel) : null;
+  const selectedRdvObj = selRdv ? rdvs.find(r => r.id === selRdv) : null;
+
+  const FILTERS = [
+    { id: "all", label: "Tout", icon: "🗓️" },
+    { id: "posts", label: "Posts", icon: "📣" },
+    { id: "rdv", label: "RDV", icon: "📞" },
+  ];
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} style={{ padding: "5px 14px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 16, cursor: "pointer" }}>‹</button>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{MONTHS_FR[month]} {year}</span>
-          {!isCurrentMonth && <button onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))} style={{ padding: "3px 10px", borderRadius: 20, border: `1px solid ${C.accent}40`, backgroundColor: C.accentSoft, color: C.accent, fontSize: 10, fontWeight: 600, cursor: "pointer" }}>Aujourd'hui</button>}
+      {/* Filtres + légende */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+        {/* Filtres */}
+        <div style={{ display: "flex", gap: 6 }}>
+          {FILTERS.map(f => (
+            <button key={f.id} onClick={() => { setFilter(f.id); setCalSel(null); setSelRdv(null); }}
+              style={{ padding: "6px 14px", borderRadius: 20, border: `1.5px solid ${filter === f.id ? C.accent : C.border}`, backgroundColor: filter === f.id ? C.accentSoft : "transparent", color: filter === f.id ? C.accent : C.muted, fontSize: 12, fontWeight: filter === f.id ? 700 : 500, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" }}>
+              {f.icon} {f.label}
+            </button>
+          ))}
         </div>
-        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} style={{ padding: "5px 14px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 16, cursor: "pointer" }}>›</button>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 1, marginBottom: 1 }}>
-        {DAYS_LABELS.map(d => <div key={d} style={{ padding: "6px 0", textAlign: "center", fontSize: 10, fontWeight: 600, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>{d}</div>)}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 1, backgroundColor: C.border + "66", borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border}` }}>
-        {calDays.map((day, i) => {
-          const dp = day ? (byDay[day] || []) : [];
-          const isToday = isCurrentMonth && day === today.getDate();
-          const isPast = day && new Date(year, month, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-          return (
-            <div key={i} style={{ minHeight: 78, padding: 5, backgroundColor: day ? C.card : C.bgLight }}>
-              {day && <>
-                <div style={{ fontSize: 10, fontWeight: isToday ? 700 : 400, color: isToday ? "#fff" : isPast ? C.muted : C.text, marginBottom: 3, ...(isToday ? { backgroundColor: C.accent, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 } : {}) }}>{day}</div>
-                {dp.map(p => (
-                  <button key={p.id} onClick={() => onSelect(p.id)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 3, padding: "2px 4px", marginBottom: 1, borderRadius: 5, border: selectedId === p.id ? `1px solid ${C.accent}` : `1px solid transparent`, backgroundColor: selectedId === p.id ? C.accentSoft : STATUSES[p.status]?.bg || C.bgLight, cursor: "pointer", fontSize: 9, color: C.text, textAlign: "left", transition: "all .1s" }}>
-                    <Dot color={STATUSES[p.status]?.color || C.muted} pulse={p.status === "late"} />
-                    <span style={{ fontWeight: 500 }}>{NETWORKS[p.network]?.short || "?"}</span>
-                  </button>
-                ))}
-              </>}
+        {/* Légende */}
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {filter !== "rdv" && [
+            { color: C.accent, label: "Post" },
+            { color: C.green, label: "Validé" },
+            { color: "#F59E0B", label: "En attente" },
+            { color: C.red, label: "En retard" },
+          ].map(l => (
+            <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: C.muted }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: l.color }} />
+              {l.label}
             </div>
-          );
-        })}
+          ))}
+          {filter !== "posts" && [
+            { color: "#7C3AED", label: "RDV" },
+          ].map(l => (
+            <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: C.muted }}>
+              <div style={{ width: 8, height: 8, borderRadius: 3, backgroundColor: l.color }} />
+              {l.label}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 20 }}>
+        {/* Calendrier */}
+        <div style={{ flex: 1 }}>
+          {/* Nav mois */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <button onClick={() => setViewDate(new Date(year, month - 1, 1))} style={{ padding: "5px 14px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 16, cursor: "pointer" }}>‹</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{MONTHS_FR[month]} {year}</span>
+              {!isCurrentMonth && <button onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))} style={{ padding: "3px 10px", borderRadius: 20, border: `1px solid ${C.accent}40`, backgroundColor: C.accentSoft, color: C.accent, fontSize: 10, fontWeight: 600, cursor: "pointer" }}>Aujourd'hui</button>}
+            </div>
+            <button onClick={() => setViewDate(new Date(year, month + 1, 1))} style={{ padding: "5px 14px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 16, cursor: "pointer" }}>›</button>
+          </div>
+
+          {/* Jours de la semaine */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 1, marginBottom: 1 }}>
+            {DAYS_LABELS.map(d => <div key={d} style={{ padding: "6px 0", textAlign: "center", fontSize: 10, fontWeight: 600, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>{d}</div>)}
+          </div>
+
+          {/* Grille */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 1, backgroundColor: C.border + "66", borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border}` }}>
+            {calDays.map((day, i) => {
+              const dp = day ? (postsByDay[day] || []) : [];
+              const dr = day ? (rdvsByDay[day] || []) : [];
+              const isToday = isCurrentMonth && day === today.getDate();
+              const isPast = day && new Date(year, month, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              const hasSelected = dp.some(p => p.id === calSel) || dr.some(r => r.id === selRdv);
+
+              return (
+                <div key={i} style={{ minHeight: 82, padding: 5, backgroundColor: hasSelected ? C.accentSoft + "80" : day ? C.card : C.bgLight }}>
+                  {day && <>
+                    <div style={{ fontSize: 10, fontWeight: isToday ? 700 : 400, color: isToday ? "#fff" : isPast ? C.muted : C.text, marginBottom: 3, ...(isToday ? { backgroundColor: C.accent, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 } : {}) }}>{day}</div>
+
+                    {/* Posts */}
+                    {dp.slice(0, 3).map(p => (
+                      <button key={p.id} onClick={() => { setCalSel(p.id); setSelRdv(null); }}
+                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 3, padding: "2px 4px", marginBottom: 1, borderRadius: 5, border: calSel === p.id ? `1px solid ${C.accent}` : `1px solid transparent`, backgroundColor: calSel === p.id ? C.accentSoft : STATUSES[p.status]?.bg || C.bgLight, cursor: "pointer", fontSize: 9, color: C.text, textAlign: "left", transition: "all .1s" }}>
+                        <Dot color={STATUSES[p.status]?.color || C.muted} pulse={p.status === "late"} />
+                        <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{NETWORKS[p.network]?.short || "?"}</span>
+                      </button>
+                    ))}
+                    {dp.length > 3 && <div style={{ fontSize: 8, color: C.muted, paddingLeft: 4 }}>+{dp.length - 3}</div>}
+
+                    {/* RDVs */}
+                    {dr.slice(0, 2).map(r => {
+                      const rt = RDV_TYPES[r.type] || RDV_TYPES.call;
+                      return (
+                        <button key={r.id} onClick={() => { setSelRdv(r.id); setCalSel(null); }}
+                          style={{ width: "100%", display: "flex", alignItems: "center", gap: 3, padding: "2px 4px", marginBottom: 1, borderRadius: 5, border: selRdv === r.id ? `1px solid #7C3AED` : `1px solid transparent`, backgroundColor: selRdv === r.id ? "#7C3AED14" : "#7C3AED10", cursor: "pointer", fontSize: 9, color: C.text, textAlign: "left", transition: "all .1s" }}>
+                          <div style={{ width: 6, height: 6, borderRadius: 2, backgroundColor: "#7C3AED", flexShrink: 0 }} />
+                          <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.time}</span>
+                        </button>
+                      );
+                    })}
+                    {dr.length > 2 && <div style={{ fontSize: 8, color: C.muted, paddingLeft: 4 }}>+{dr.length - 2}</div>}
+                  </>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Panneau de détail */}
+        <div style={{ width: 290, flexShrink: 0 }}>
+          {/* Détail post sélectionné */}
+          {selectedPost && (() => {
+            const p = selectedPost;
+            const ca = isClient && ["pending", "pending_text", "pending_visual", "late"].includes(p.status);
+            const cl = clients.find(c => c.id === p.clientId);
+            return (
+              <div style={{ backgroundColor: C.card, borderRadius: 16, overflow: "hidden", border: `1px solid ${C.border}`, animation: "fadeIn .2s ease" }}>
+                {p.img && <img src={p.img} alt="" style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} onError={e => { e.target.style.display = "none"; }} />}
+                <div style={{ padding: "12px 14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+                    {cl && !isClient && <><Avatar client={cl} size={18} /><span style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{cl.name}</span><span style={{ color: C.border }}>·</span></>}
+                    <NetIcon network={p.network} size={11} />
+                    <Badge status={p.status} small />
+                  </div>
+                  {p.date && <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>📅 {new Date(p.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</div>}
+                  <p style={{ fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", color: C.textSoft, marginBottom: 10 }}>{p.caption}</p>
+                  {p.comments?.length > 0 && <div style={{ padding: "6px 8px", borderRadius: 8, backgroundColor: C.bgLight, fontSize: 11, color: C.textSoft, marginBottom: 10, border: `1px solid ${C.border}` }}><span style={{ color: C.accent }}>💬</span> {p.comments[0].text}</div>}
+                  {ca && <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => { approve(p.id); setCalSel(null); }} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.green}, ${C.green}cc)`, color: "#fff", fontWeight: 600, fontSize: 11, cursor: "pointer" }}>✓ Valider</button>
+                    <button onClick={() => { revise(p.id, "Modification demandée"); setCalSel(null); }} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: `1.5px solid ${C.accent}`, backgroundColor: "transparent", color: C.accent, fontWeight: 600, fontSize: 11, cursor: "pointer" }}>✏️ Modifier</button>
+                  </div>}
+                  {p.status === "approved" && <div style={{ padding: "8px", borderRadius: 8, backgroundColor: C.greenSoft, fontSize: 11, color: C.green, fontWeight: 500, textAlign: "center", border: `1px solid ${C.green}20` }}>✓ Validé</div>}
+                  <button onClick={() => setCalSel(null)} style={{ marginTop: 10, width: "100%", padding: "6px 0", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer" }}>✕ Fermer</button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Détail RDV sélectionné */}
+          {selectedRdvObj && (() => {
+            const r = selectedRdvObj;
+            const rt = RDV_TYPES[r.type] || RDV_TYPES.call;
+            const cl = clients.find(c => String(c.id) === String(r.clientId));
+            return (
+              <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid #7C3AED30`, animation: "fadeIn .2s ease", overflow: "hidden" }}>
+                <div style={{ height: 4, background: "linear-gradient(90deg, #7C3AED, #E0387A)" }} />
+                <div style={{ padding: "14px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: rt.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{rt.icon}</div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{r.title}</div>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "#7C3AED", backgroundColor: "#7C3AED15", padding: "2px 8px", borderRadius: 20 }}>{rt.label}</span>
+                    </div>
+                  </div>
+                  {cl && <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}><Avatar client={cl} size={18} /><span style={{ fontSize: 12, color: C.textSoft, fontWeight: 500 }}>{cl.name}</span></div>}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: C.textSoft }}>
+                    <div>📅 {new Date(r.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</div>
+                    <div>🕐 {r.time} · {r.duration}</div>
+                    {r.location && <div>📍 {r.location}</div>}
+                  </div>
+                  {r.notes && <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 8, backgroundColor: C.bgLight, fontSize: 11, color: C.muted, fontStyle: "italic", border: `1px solid ${C.border}` }}>{r.notes}</div>}
+                  <button onClick={() => setSelRdv(null)} style={{ marginTop: 12, width: "100%", padding: "6px 0", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer" }}>✕ Fermer</button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* État vide */}
+          {!selectedPost && !selectedRdvObj && (
+            <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 28, textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 8, opacity: .2 }}>📅</div>
+              <div style={{ fontSize: 12, color: C.muted }}>Cliquez sur un post ou un RDV</div>
+            </div>
+          )}
+
+          {/* Prochains RDVs du mois */}
+          {!isClient && filter !== "posts" && (() => {
+            const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+            const monthRdvs = rdvs.filter(r => r.date?.startsWith(monthStr)).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+            if (monthRdvs.length === 0) return null;
+            return (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>RDV ce mois</div>
+                <div style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                  {monthRdvs.map((r, i) => {
+                    const rt = RDV_TYPES[r.type] || RDV_TYPES.call;
+                    const cl = clients.find(c => String(c.id) === String(r.clientId));
+                    return (
+                      <div key={r.id} onClick={() => { setSelRdv(r.id); setCalSel(null); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: i < monthRdvs.length - 1 ? `1px solid ${C.border}` : "none", cursor: "pointer", backgroundColor: selRdv === r.id ? "#7C3AED08" : "transparent", transition: "background .1s" }}>
+                        <div style={{ fontSize: 16 }}>{rt.icon}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</div>
+                          <div style={{ fontSize: 10, color: C.muted }}>{new Date(r.date).getDate()} · {r.time} · {cl?.name}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       </div>
     </div>
   );
@@ -1167,35 +1365,45 @@ export default function App() {
           )}
 
           {/* CALENDAR */}
-          {tab === "calendar" && (
+          {tab === "calendar" && !isClient && (
             <div style={{ animation: "fadeIn .3s ease" }}>
-              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 4 }}>{isClient ? "Mon calendrier" : "Calendrier"}</h2>
-              {selClient && !isClient && <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{clients.find(c => c.id === selClient)?.name}</p>}
-              <div style={{ display: "flex", gap: 20 }}>
-                <div style={{ flex: 1 }}><Calendar posts={visible} onSelect={setCalSel} selectedId={calSel} /></div>
-                <div style={{ width: 290, flexShrink: 0 }}>
-                  {calSel && (() => {
-                    const p = posts.find(x => x.id === calSel); if (!p) return null;
-                    const ca = isClient && (p.status === "pending" || p.status === "late");
-                    return (
-                      <div style={{ backgroundColor: C.card, borderRadius: 16, overflow: "hidden", border: `1px solid ${C.border}`, animation: "fadeIn .2s ease" }}>
-                        <img src={p.img} alt="" style={{ width: "100%", height: 190, objectFit: "cover", display: "block" }} onError={e => { e.target.style.display = "none"; }} />
-                        <div style={{ padding: "12px 14px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}><span style={{ fontSize: 12, fontWeight: 600 }}>{p.day} mars</span><NetIcon network={p.network} size={11} /><Badge status={p.status} small /></div>
-                          <p style={{ fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap", color: C.textSoft, marginBottom: 10 }}>{p.caption}</p>
-                          {p.comments.length > 0 && <div style={{ padding: "6px 8px", borderRadius: 8, backgroundColor: C.bgLight, fontSize: 11, color: C.textSoft, marginBottom: 10, border: `1px solid ${C.border}` }}><span style={{ color: C.accent }}>💬</span> {p.comments[0].text}</div>}
-                          {ca && <div style={{ display: "flex", gap: 6 }}>
-                            <button onClick={() => { approve(p.id); setCalSel(null); }} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.green}, ${C.green}cc)`, color: "#fff", fontWeight: 600, fontSize: 11, cursor: "pointer" }}>✓ Valider</button>
-                            <button onClick={() => { revise(p.id, "Modification demandée"); setCalSel(null); }} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: `1.5px solid ${C.accent}`, backgroundColor: "transparent", color: C.accent, fontWeight: 600, fontSize: 11, cursor: "pointer" }}>✏️ Modifier</button>
-                          </div>}
-                          {p.status === "approved" && <div style={{ padding: "8px", borderRadius: 8, backgroundColor: C.greenSoft, fontSize: 11, color: C.green, fontWeight: 500, textAlign: "center", border: `1px solid ${C.green}20` }}>✓ Validé</div>}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  {!calSel && <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 28, textAlign: "center" }}><div style={{ fontSize: 24, marginBottom: 8, opacity: .2 }}>📅</div><div style={{ fontSize: 12, color: C.muted }}>Cliquez sur un post</div></div>}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div>
+                  <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 2 }}>Calendrier</h2>
+                  {selClient && <p style={{ fontSize: 12, color: C.muted }}>{clients.find(c => c.id === selClient)?.name}</p>}
                 </div>
+                <button onClick={() => setShowAddRdv(true)} style={{ padding: "9px 18px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer", boxShadow: `0 2px 8px ${C.accentGlow}` }}>
+                  + Ajouter
+                </button>
               </div>
+              <CalendarView
+                posts={visible}
+                rdvs={selClient ? rdvs.filter(r => String(r.clientId) === String(selClient)) : rdvs}
+                clients={clients}
+                calSel={calSel}
+                setCalSel={setCalSel}
+                isClient={isClient}
+                approve={approve}
+                revise={revise}
+                posts_all={posts}
+              />
+            </div>
+          )}
+
+          {tab === "calendar" && isClient && (
+            <div style={{ animation: "fadeIn .3s ease" }}>
+              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 16 }}>Mon calendrier</h2>
+              <CalendarView
+                posts={visible}
+                rdvs={[]}
+                clients={clients}
+                calSel={calSel}
+                setCalSel={setCalSel}
+                isClient={isClient}
+                approve={approve}
+                revise={revise}
+                posts_all={posts}
+              />
             </div>
           )}
 
