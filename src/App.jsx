@@ -840,6 +840,7 @@ export default function App() {
   const [cmProfile, setCmProfile] = useState(null);
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
+  const [ficheTab, setFicheTab] = useState("posts");
 
   // ─── RDV STATE ───
   const [rdvs, setRdvs] = useState(INITIAL_RDVS);
@@ -1188,8 +1189,12 @@ export default function App() {
     setSaving(false);
   };
   const filtered = posts.filter(p => selClient ? p.clientId === selClient : true);
-  const visible = isClient ? filtered.filter(p => p.status !== "draft") : filtered;
-  const stats = { total: posts.length, pending: posts.filter(p => p.status === "pending").length, late: posts.filter(p => p.status === "late").length, approved: posts.filter(p => p.status === "approved").length, revision: posts.filter(p => p.status === "revision").length };
+  const visible = isClient ? posts.filter(p => p.clientId === selClient && p.status !== "draft") : posts; // CM voit tout
+  const stats = { total: posts.length, pending: posts.filter(p => ["pending","pending_text","pending_visual"].includes(p.status)).length, late: posts.filter(p => p.status === "late").length, approved: posts.filter(p => p.status === "approved").length, revision: posts.filter(p => p.status === "revision").length };
+
+  // Navigation vers fiche client
+  const openClientPage = (clientId) => { setSelClient(clientId); setTab("client"); setFicheTab("posts"); };
+  const closeClientPage = () => { setSelClient(null); setTab("dashboard"); };
 
   const findClient = (id) => clients.find(c => c.id === id || c.airtableId === id);
   const cmTabs = [{ id: "dashboard", icon: "📊", label: "Dashboard" }, { id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Posts" }, { id: "billing", icon: "🧾", label: "Facturation" }, { id: "rdv", icon: "📞", label: "Rendez-vous" }, { id: "assistant", icon: "🤖", label: "Assistante IA" }, { id: "pomodoro", icon: "⏱️", label: "Pomodoro" }, { id: "workflows", icon: "🔔", label: "Relances clients" }];
@@ -1255,7 +1260,6 @@ export default function App() {
             <span style={{ fontSize: 9, fontWeight: 700, color: C.sidebarMuted, letterSpacing: 1.2, textTransform: "uppercase" }}>{isClient ? "Simuler" : "Clients"}</span>
             {!isClient && <button onClick={() => setShowNewClient(true)} style={{ fontSize: 18, lineHeight: 1, border: "none", background: "none", color: C.sidebarAccent, cursor: "pointer", fontWeight: 700, padding: "0 2px" }} title="Nouveau client">+</button>}
           </div>
-          {!isClient && <button onClick={() => setSelClient(null)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: !selClient ? C.sidebarActive : "transparent", color: !selClient ? "#FFD6E8" : C.sidebarMuted, fontWeight: !selClient ? 600 : 400, borderRadius: 6 }}>Tous</button>}
           {/* En mode client connecté, afficher uniquement son compte */}
           {isClient && authUser ? (
             selClient && (() => {
@@ -1272,7 +1276,7 @@ export default function App() {
               <div key={c.id} style={{ display: "flex", alignItems: "center", paddingRight: 8 }}
                 onMouseEnter={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "1"; }}
                 onMouseLeave={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "0"; }}>
-                <button onClick={() => setSelClient(c.id)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: selClient === c.id ? C.sidebarActive : "transparent", color: selClient === c.id ? "#FFD6E8" : C.sidebarMuted, fontWeight: selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
+                <button onClick={() => openClientPage(c.id)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: tab === "client" && selClient === c.id ? C.sidebarActive : "transparent", color: tab === "client" && selClient === c.id ? "#FFD6E8" : C.sidebarMuted, fontWeight: tab === "client" && selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
                   <Avatar client={c} size={22} /> {c.name}
                 </button>
                 {!isClient && <button className="del-btn" onClick={() => setConfirmDelete(c.id)} style={{ opacity: 0, border: "none", background: "none", cursor: "pointer", fontSize: 13, color: C.red, padding: "4px 6px", borderRadius: 6, transition: "opacity .15s", flexShrink: 0 }} title="Supprimer">🗑</button>}
@@ -1316,7 +1320,7 @@ export default function App() {
                   const pe = cp.filter(p => p.status === "pending" || p.status === "late").length;
                   const ap = cp.filter(p => p.status === "approved").length;
                   return (
-                    <div key={cl.id} onClick={() => { setSelClient(cl.id); setTab("posts"); }} style={{ backgroundColor: C.card, borderRadius: 14, padding: 14, border: `1px solid ${C.border}`, cursor: "pointer", transition: "all .2s" }}
+                    <div key={cl.id} onClick={() => openClientPage(cl.id)} style={{ backgroundColor: C.card, borderRadius: 14, padding: 14, border: `1px solid ${C.border}`, cursor: "pointer", transition: "all .2s" }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = cl.color; e.currentTarget.style.boxShadow = `0 4px 16px ${cl.color}15`; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "none"; }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}><Avatar client={cl} size={28} /><span style={{ fontWeight: 600, fontSize: 13 }}>{cl.name}</span></div>
@@ -1407,6 +1411,210 @@ export default function App() {
               />
             </div>
           )}
+
+          {/* ─── FICHE CLIENT ─── */}
+          {tab === "client" && !isClient && selClient && (() => {
+            const cl = clients.find(c => c.id === selClient);
+            if (!cl) return null;
+            const clientPosts = posts.filter(p => p.clientId === selClient);
+            const clientRdvs = rdvs.filter(r => String(r.clientId) === String(selClient));
+            const clientInvoices = factures[selClient] || [];
+            const clientStrategy = strategies[selClient];
+            const pending = clientPosts.filter(p => ["pending","pending_text","pending_visual","late"].includes(p.status)).length;
+            const approved = clientPosts.filter(p => p.status === "approved").length;
+            const totalPaid = clientInvoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
+            const totalPending = clientInvoices.filter(i => i.status !== "paid").reduce((s, i) => s + i.amount, 0);
+
+            return (
+              <div style={{ animation: "fadeIn .3s ease" }}>
+                {/* Header fiche */}
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24, paddingBottom: 20, borderBottom: `1px solid ${C.border}` }}>
+                  <button onClick={closeClientPage} style={{ border: "none", background: "none", color: C.muted, cursor: "pointer", fontSize: 20, padding: "4px 8px", borderRadius: 8, lineHeight: 1 }} title="Retour">←</button>
+                  <Avatar client={cl} size={52} />
+                  <div style={{ flex: 1 }}>
+                    <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 2 }}>{cl.name}</h2>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      {cl.email && <span style={{ fontSize: 12, color: C.muted }}>✉️ {cl.email}</span>}
+                      {cl.telephone && <span style={{ fontSize: 12, color: C.muted }}>📞 {cl.telephone}</span>}
+                      {cl.reseaux?.length > 0 && cl.reseaux.map(r => <span key={r} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, backgroundColor: C.accentSoft, color: C.accent, fontWeight: 600 }}>{r}</span>)}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => setShowNewPost(true)} style={{ padding: "8px 14px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>+ Post</button>
+                    <button onClick={() => { setNewRdv(r => ({...r, clientId: selClient})); setShowAddRdv(true); }} style={{ padding: "8px 14px", borderRadius: 10, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.accent, fontWeight: 600, fontSize: 12, cursor: "pointer" }}>+ RDV</button>
+                  </div>
+                </div>
+
+                {/* KPIs rapides */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginBottom: 24 }}>
+                  {[
+                    { label: "Posts ce mois", value: clientPosts.length, color: C.accent },
+                    { label: "En attente", value: pending, color: pending > 0 ? C.gold : C.green },
+                    { label: "Validés", value: approved, color: C.green },
+                    { label: "Payé", value: `${totalPaid.toLocaleString()} €`, color: C.green },
+                    { label: "À régler", value: `${totalPending.toLocaleString()} €`, color: totalPending > 0 ? C.gold : C.green },
+                    { label: "RDVs", value: clientRdvs.length, color: C.purple },
+                  ].map((k, i) => (
+                    <div key={i} style={{ backgroundColor: C.card, borderRadius: 12, padding: "12px 14px", border: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, marginBottom: 4 }}>{k.label}</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: k.color }}>{k.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Onglets internes */}
+                <div style={{ display: "flex", gap: 4, marginBottom: 20, borderBottom: `1px solid ${C.border}`, paddingBottom: 0 }}>
+                  {[
+                    { id: "posts", label: "📋 Posts", count: clientPosts.length },
+                    { id: "calendar", label: "📅 Calendrier" },
+                    { id: "billing", label: "🧾 Facturation", count: clientInvoices.length },
+                    { id: "rdv", label: "📞 RDV", count: clientRdvs.length },
+                    { id: "strategy", label: "🎯 Stratégie" },
+                    { id: "infos", label: "👤 Infos" },
+                  ].map(t => (
+                    <button key={t.id} onClick={() => { setFicheTab(t.id); setCalSel(null); }}
+                      style={{ padding: "8px 14px", border: "none", borderBottom: ficheTab === t.id ? `2px solid ${C.accent}` : "2px solid transparent", backgroundColor: "transparent", color: ficheTab === t.id ? C.accent : C.muted, fontWeight: ficheTab === t.id ? 700 : 400, fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginBottom: -1, display: "flex", alignItems: "center", gap: 5, transition: "all .15s" }}>
+                      {t.label}
+                      {t.count !== undefined && <span style={{ fontSize: 10, backgroundColor: ficheTab === t.id ? C.accentSoft : C.bgLight, color: ficheTab === t.id ? C.accent : C.muted, borderRadius: 20, padding: "1px 6px", fontWeight: 700 }}>{t.count}</span>}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Contenu onglet Posts */}
+                {ficheTab === "posts" && (
+                  <div>
+                    {clientPosts.length === 0
+                      ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}><div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>Aucun post pour ce client</div>
+                      : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14 }}>
+                          {clientPosts.sort((a, b) => (a.date||"").localeCompare(b.date||"")).map(p => (
+                            <PostCard key={p.id} post={p} client={cl} isClient={false} onApprove={approve} onApproveVisual={approveVisual} onRevision={revise} onDelete={() => setConfirmDeletePost(p.id)} onEdit={id => setEditPostId(id)} onAddComment={(id, text) => addComment(id, text, "cm")} />
+                          ))}
+                        </div>
+                    }
+                  </div>
+                )}
+
+                {/* Contenu onglet Calendrier */}
+                {ficheTab === "calendar" && (
+                  <CalendarView posts={clientPosts} rdvs={clientRdvs} clients={clients} calSel={calSel} setCalSel={setCalSel} isClient={false} approve={approve} revise={revise} posts_all={posts} />
+                )}
+
+                {/* Contenu onglet Facturation */}
+                {ficheTab === "billing" && (
+                  <div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
+                      <div style={{ backgroundColor: C.card, borderRadius: 12, padding: "14px 16px", border: `1px solid ${C.border}` }}>
+                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, marginBottom: 4 }}>Total facturé</div>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>{(totalPaid + totalPending).toLocaleString()} €</div>
+                      </div>
+                      <div style={{ backgroundColor: C.card, borderRadius: 12, padding: "14px 16px", border: `1px solid ${C.border}` }}>
+                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, marginBottom: 4 }}>Payé</div>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: C.green }}>{totalPaid.toLocaleString()} €</div>
+                      </div>
+                      <div style={{ backgroundColor: C.card, borderRadius: 12, padding: "14px 16px", border: `1px solid ${C.border}` }}>
+                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: .8, marginBottom: 4 }}>En attente</div>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: totalPending > 0 ? C.gold : C.green }}>{totalPending.toLocaleString()} €</div>
+                      </div>
+                    </div>
+                    {clientInvoices.length === 0
+                      ? <div style={{ textAlign: "center", padding: 30, color: C.muted }}>Aucune facture</div>
+                      : <div style={{ backgroundColor: C.card, borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "100px 2fr 1fr 90px 90px 80px", gap: 6, padding: "9px 14px", fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: .8, textTransform: "uppercase", backgroundColor: C.bgLight, borderBottom: `1px solid ${C.border}` }}>
+                            <span>N°</span><span>Description</span><span>Période</span><span style={{ textAlign: "right" }}>Montant</span><span style={{ textAlign: "center" }}>Statut</span><span style={{ textAlign: "center" }}>Action</span>
+                          </div>
+                          {clientInvoices.sort((a, b) => new Date(b.date) - new Date(a.date)).map((inv, i) => {
+                            const st = INV_STATUS[inv.status];
+                            return (
+                              <div key={inv.id} style={{ display: "grid", gridTemplateColumns: "100px 2fr 1fr 90px 90px 80px", gap: 6, padding: "11px 14px", fontSize: 12, alignItems: "center", backgroundColor: i % 2 === 0 ? C.card : C.bgLight, borderBottom: `1px solid ${C.border}` }}>
+                                <span style={{ fontWeight: 600, color: C.accent, fontSize: 11 }}>{inv.id}</span>
+                                <div><div style={{ fontWeight: 500 }}>{inv.description}</div><div style={{ fontSize: 10, color: C.muted }}>Émise le {new Date(inv.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div></div>
+                                <span style={{ color: C.textSoft }}>{inv.period}</span>
+                                <span style={{ textAlign: "right", fontWeight: 700 }}>{inv.amount.toLocaleString()} €</span>
+                                <div style={{ textAlign: "center" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, fontSize: 10, fontWeight: 600, color: st.color, backgroundColor: st.bg }}><span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: st.color }} />{st.label}</span></div>
+                                <div style={{ textAlign: "center" }}><button onClick={() => fire(`📄 ${inv.id}`)} style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.accent, fontSize: 10, fontWeight: 600, cursor: "pointer" }}>↓ PDF</button></div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                    }
+                    <div style={{ marginTop: 16, padding: 20, borderRadius: 14, border: `2px dashed ${C.accent}30`, backgroundColor: C.accentSoft, textAlign: "center", cursor: "pointer" }} onClick={() => fire("📎 Dépôt facture (simulation)")}>
+                      <div style={{ fontSize: 24, marginBottom: 6, opacity: .5 }}>📎</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.accent }}>Déposer une facture</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Le client sera notifié automatiquement</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Contenu onglet RDV */}
+                {ficheTab === "rdv" && (
+                  <div>
+                    {clientRdvs.length === 0
+                      ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}><div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>Aucun RDV planifié</div>
+                      : <div style={{ backgroundColor: C.card, borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                          {clientRdvs.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)).map((r, i) => {
+                            const rt = RDV_TYPES[r.type] || RDV_TYPES.call;
+                            const isPast = r.date < new Date().toISOString().split("T")[0];
+                            return (
+                              <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: i < clientRdvs.length - 1 ? `1px solid ${C.border}` : "none", opacity: isPast ? 0.55 : 1 }}>
+                                <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: rt.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{rt.icon}</div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{r.title}</div>
+                                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{r.date.split("-").reverse().join("/")} à {r.time} · {r.duration}{r.location && ` · ${r.location}`}</div>
+                                  {r.notes && <div style={{ fontSize: 10, color: C.muted, marginTop: 2, fontStyle: "italic" }}>{r.notes}</div>}
+                                </div>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: rt.color, backgroundColor: rt.color + "15", padding: "2px 8px", borderRadius: 20 }}>{rt.label}</span>
+                                <button onClick={() => delRdv(r.id)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 16, padding: "2px 6px" }}>×</button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                    }
+                  </div>
+                )}
+
+                {/* Contenu onglet Stratégie */}
+                {ficheTab === "strategy" && (
+                  <StrategyPanel strategy={clientStrategy} isClient={false} onSuggest={() => fire("💬 Suggestion enregistrée")} />
+                )}
+
+                {/* Contenu onglet Infos */}
+                {ficheTab === "infos" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div style={{ backgroundColor: C.card, borderRadius: 14, padding: 18, border: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 }}>Contact</div>
+                      {[
+                        { label: "Entreprise", value: cl.name },
+                        { label: "Prénom", value: cl.prenom },
+                        { label: "Nom", value: cl.nom },
+                        { label: "Email", value: cl.email },
+                        { label: "Téléphone", value: cl.telephone },
+                        { label: "Adresse", value: cl.adresse },
+                      ].map((f, i) => f.value ? (
+                        <div key={i} style={{ display: "flex", gap: 10, padding: "7px 0", borderBottom: `1px solid ${C.border}`, fontSize: 13 }}>
+                          <span style={{ color: C.muted, minWidth: 90, fontSize: 11, fontWeight: 600 }}>{f.label}</span>
+                          <span style={{ color: C.text }}>{f.value}</span>
+                        </div>
+                      ) : null)}
+                    </div>
+                    <div style={{ backgroundColor: C.card, borderRadius: 14, padding: 18, border: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 }}>Accès portail</div>
+                      <div style={{ padding: "10px 12px", borderRadius: 10, backgroundColor: C.bgLight, border: `1px solid ${C.border}`, fontSize: 12, color: C.textSoft, marginBottom: 12 }}>
+                        <div style={{ marginBottom: 4 }}><span style={{ color: C.muted, fontWeight: 600 }}>Login : </span>{cl.email}</div>
+                        <div><span style={{ color: C.muted, fontWeight: 600 }}>Mot de passe : </span><span style={{ color: C.muted }}>••••••••</span></div>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginTop: 16 }}>Réseaux actifs</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {cl.reseaux?.length > 0
+                          ? cl.reseaux.map(r => <span key={r} style={{ fontSize: 12, padding: "4px 12px", borderRadius: 20, backgroundColor: C.accentSoft, color: C.accent, fontWeight: 600, border: `1px solid ${C.accent}25` }}>{r}</span>)
+                          : <span style={{ fontSize: 12, color: C.muted }}>Aucun réseau défini</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* POSTS */}
           {tab === "posts" && (
