@@ -1373,7 +1373,7 @@ export default function App() {
                   <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 2 }}>Calendrier</h2>
                   {selClient && <p style={{ fontSize: 12, color: C.muted }}>{clients.find(c => c.id === selClient)?.name}</p>}
                 </div>
-                <button onClick={() => setShowAddRdv(true)} style={{ padding: "9px 18px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer", boxShadow: `0 2px 8px ${C.accentGlow}` }}>
+                <button onClick={() => { setNewRdv(r => ({...r, clientId: selClient || (clients[0]?.id || "")})); setShowAddRdv(true); }} style={{ padding: "9px 18px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer", boxShadow: `0 2px 8px ${C.accentGlow}` }}>
                   + Ajouter
                 </button>
               </div>
@@ -2241,6 +2241,73 @@ export default function App() {
           </div>
         );
       })()}
+
+      {/* MODAL NOUVEAU RDV */}
+      {showAddRdv && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, animation: "fadeIn .2s ease" }} onClick={() => setShowAddRdv(false)}>
+          <div style={{ backgroundColor: C.card, borderRadius: 20, padding: 28, width: 480, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: C.text }}>Nouveau rendez-vous</h3>
+              <button onClick={() => setShowAddRdv(false)} style={{ border: "none", background: "none", fontSize: 18, cursor: "pointer", color: C.muted }}>✕</button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {/* Titre */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Titre *</label>
+                <input value={newRdv.title} onChange={e => setNewRdv(r => ({...r, title: e.target.value}))} placeholder="Ex: Bilan mensuel, Brief contenu..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} onFocus={e => e.target.style.borderColor = C.accent} onBlur={e => e.target.style.borderColor = C.border} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {/* Client */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Client</label>
+                  <select value={newRdv.clientId} onChange={e => setNewRdv(r => ({...r, clientId: e.target.value}))} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, fontFamily: "inherit", outline: "none" }}>
+                    <option value="">— Sélectionner —</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                {/* Type */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Type</label>
+                  <select value={newRdv.type} onChange={e => setNewRdv(r => ({...r, type: e.target.value}))} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, fontFamily: "inherit", outline: "none" }}>
+                    {Object.entries(RDV_TYPES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+                  </select>
+                </div>
+                {/* Date */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Date *</label>
+                  <input type="date" value={newRdv.date} onChange={e => setNewRdv(r => ({...r, date: e.target.value}))} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+                </div>
+                {/* Heure */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Heure</label>
+                  <input type="time" value={newRdv.time} onChange={e => setNewRdv(r => ({...r, time: e.target.value}))} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+                </div>
+                {/* Durée */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Durée</label>
+                  <input value={newRdv.duration} onChange={e => setNewRdv(r => ({...r, duration: e.target.value}))} placeholder="Ex: 1h, 30min..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+                </div>
+                {/* Lieu */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Lieu</label>
+                  <input value={newRdv.location} onChange={e => setNewRdv(r => ({...r, location: e.target.value}))} placeholder="Visio, Téléphone, Adresse..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+                </div>
+              </div>
+              {/* Notes */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Notes</label>
+                <textarea value={newRdv.notes} onChange={e => setNewRdv(r => ({...r, notes: e.target.value}))} placeholder="Ordre du jour, points à aborder..." rows={3} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none", resize: "vertical" }} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+              <button onClick={() => { addRdv(); setShowAddRdv(false); }} disabled={!newRdv.title || !newRdv.date} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: !newRdv.title || !newRdv.date ? "default" : "pointer", opacity: !newRdv.title || !newRdv.date ? .5 : 1, boxShadow: `0 4px 14px ${C.accentGlow}` }}>
+                ✅ Ajouter le RDV
+              </button>
+              <button onClick={() => setShowAddRdv(false)} style={{ padding: "11px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TOAST */}
       {toast && (
