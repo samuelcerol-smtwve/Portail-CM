@@ -841,10 +841,15 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
   const [ficheTab, setFicheTab] = useState("posts");
+  const [billingObjectif, setBillingObjectif] = useState(3000);
+  const [editingObjectif, setEditingObjectif] = useState(false);
   const [tasks, setTasks] = useState([
     { id: 1, label: "Relancer Maison Soleil", done: false },
     { id: 2, label: "Créer post Instagram Flora", done: false },
   ]);
+  const [objectifCA, setObjectifCA] = useState(3500);
+  const [editingObjectif, setEditingObjectif] = useState(false);
+  const [objectifInput, setObjectifInput] = useState("3500");
 
   // ─── RDV STATE ───
   const [rdvs, setRdvs] = useState(INITIAL_RDVS);
@@ -1893,152 +1898,158 @@ export default function App() {
           {/* BILLING */}
           {tab === "billing" && (
             <div style={{ animation: "fadeIn .3s ease" }}>
-              {selClient ? (() => {
-                const invoices = factures[selClient] || [];
-                const cl = clients.find(c => c.id === selClient);
-                const totalPaid = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
-                const totalPending = invoices.filter(i => i.status === "pending" || i.status === "overdue").reduce((s, i) => s + i.amount, 0);
-
+              {!isClient ? (() => {
+                const allInvoices = Object.values(factures).flat();
+                const caRealise = allInvoices.reduce((s, i) => s + i.amount, 0);
+                const caEnCours = allInvoices.filter(i => i.status === "pending").reduce((s, i) => s + i.amount, 0);
+                const encaisse = allInvoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
+                const delta = caRealise - encaisse;
+                const objectifMensuel = billingObjectif;
+                const progressPct = Math.min((caRealise / objectifMensuel) * 100, 100);
+                const manqueAFacturer = Math.max(objectifMensuel - caRealise, 0);
+                const MOIS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+                const now = new Date();
+                const graphData = Array.from({ length: 6 }, (_, i) => {
+                  const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+                  const m = d.getMonth(); const y = d.getFullYear();
+                  const monthInv = allInvoices.filter(inv => { if (!inv.date) return false; const id = new Date(inv.date); return id.getMonth() === m && id.getFullYear() === y; });
+                  return { label: MOIS[m], facture: monthInv.reduce((s, x) => s + x.amount, 0), encaisse: monthInv.filter(x => x.status === "paid").reduce((s, x) => s + x.amount, 0), isCurrentMonth: i === 5 };
+                });
+                const maxGraph = Math.max(...graphData.map(d => Math.max(d.facture, d.encaisse)), objectifMensuel, 1);
                 return (
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        {!isClient && <Avatar client={cl} size={28} />}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+                      <div>
+                        <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 24, fontWeight: 700, color: C.text }}>Tableau de bord financier</h2>
+                        <p style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Suivi de ton chiffre d'affaires et encaissements</p>
+                      </div>
+                    </div>
+
+                    {/* Objectif + jauge */}
+                    <div style={{ backgroundColor: C.card, borderRadius: 16, padding: 20, border: `1px solid ${C.border}`, marginBottom: 20, position: "relative", overflow: "hidden" }}>
+                      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${C.accent}, ${C.lavender})` }} />
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                         <div>
-                          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22 }}>{isClient ? "Mes factures" : `Facturation — ${cl.name}`}</h2>
-                          <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Historique et suivi des paiements</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: .8, marginBottom: 6 }}>Objectif mensuel</div>
+                          {editingObjectif ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <input type="number" id="objectif-input" defaultValue={billingObjectif} autoFocus
+                                onKeyDown={e => { if (e.key === "Enter") { setBillingObjectif(Number(e.target.value)); setEditingObjectif(false); } if (e.key === "Escape") setEditingObjectif(false); }}
+                                style={{ width: 110, padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${C.accent}`, fontSize: 18, fontWeight: 700, color: C.text, backgroundColor: C.bgLight, fontFamily: "inherit", outline: "none" }} />
+                              <span style={{ fontSize: 18, fontWeight: 700, color: C.accent }}>€</span>
+                              <button onClick={() => { const v = document.getElementById("objectif-input").value; setBillingObjectif(Number(v)); setEditingObjectif(false); }}
+                                style={{ padding: "6px 14px", borderRadius: 8, border: "none", backgroundColor: C.accent, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>OK</button>
+                              <button onClick={() => setEditingObjectif(false)} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>✕</button>
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <span style={{ fontSize: 30, fontWeight: 800, color: C.text }}>{billingObjectif.toLocaleString()} €</span>
+                              <button onClick={() => setEditingObjectif(true)} style={{ padding: "3px 10px", borderRadius: 6, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer" }}>✏️ Modifier</button>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>CA réalisé ce mois</div>
+                          <div style={{ fontSize: 26, fontWeight: 800, color: progressPct >= 100 ? C.green : C.accent }}>{caRealise.toLocaleString()} €</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: progressPct >= 100 ? C.green : C.accent }}>{Math.round(progressPct)}% de l'objectif</div>
                         </div>
                       </div>
-                      {!isClient && (
-                        <button onClick={() => fire("📎 Facture déposée (simulation)")} style={{
-                          padding: "9px 18px", borderRadius: 10, border: "none",
-                          background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`,
-                          color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer",
-                          boxShadow: `0 2px 8px ${C.accentGlow}`, transition: "all .2s",
-                        }}
-                        onMouseEnter={e => e.target.style.transform = "translateY(-1px)"}
-                        onMouseLeave={e => e.target.style.transform = "translateY(0)"}>
-                          + Déposer une facture
-                        </button>
+                      <div style={{ height: 18, borderRadius: 9, backgroundColor: C.bgLight, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 6 }}>
+                        <div style={{ height: "100%", borderRadius: 9, background: progressPct >= 100 ? `linear-gradient(90deg, ${C.green}, #6EE7A0)` : `linear-gradient(90deg, ${C.accent}, ${C.lavender})`, width: `${progressPct}%`, transition: "width .8s ease", display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: progressPct > 10 ? 8 : 0 }}>
+                          {progressPct > 12 && <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>{Math.round(progressPct)}%</span>}
+                        </div>
+                      </div>
+                      {manqueAFacturer > 0 ? (
+                        <div style={{ fontSize: 11, color: C.muted }}>Il manque <strong style={{ color: C.orange }}>{manqueAFacturer.toLocaleString()} €</strong> pour atteindre l'objectif</div>
+                      ) : (
+                        <div style={{ fontSize: 11, color: C.green, fontWeight: 600 }}>🎉 Objectif atteint !</div>
                       )}
                     </div>
 
-                    {/* Summary cards */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(160px,1fr))", gap: 10, marginBottom: 24 }}>
-                      <div style={{ backgroundColor: C.card, borderRadius: 14, padding: "14px 16px", border: `1px solid ${C.border}` }}>
-                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: .8, textTransform: "uppercase", marginBottom: 4 }}>Total facturé</div>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: C.text }}>{(totalPaid + totalPending).toLocaleString()} €</div>
-                      </div>
-                      <div style={{ backgroundColor: C.card, borderRadius: 14, padding: "14px 16px", border: `1px solid ${C.border}` }}>
-                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: .8, textTransform: "uppercase", marginBottom: 4 }}>Payé</div>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: C.green }}>{totalPaid.toLocaleString()} €</div>
-                        <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{invoices.filter(i => i.status === "paid").length} facture{invoices.filter(i => i.status === "paid").length > 1 ? "s" : ""}</div>
-                      </div>
-                      <div style={{ backgroundColor: C.card, borderRadius: 14, padding: "14px 16px", border: `1px solid ${C.border}` }}>
-                        <div style={{ fontSize: 10, color: C.muted, fontWeight: 600, letterSpacing: .8, textTransform: "uppercase", marginBottom: 4 }}>En attente</div>
-                        <div style={{ fontSize: 24, fontWeight: 700, color: totalPending > 0 ? C.gold : C.green }}>{totalPending.toLocaleString()} €</div>
-                        <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{invoices.filter(i => i.status !== "paid").length} facture{invoices.filter(i => i.status !== "paid").length > 1 ? "s" : ""}</div>
-                      </div>
+                    {/* 4 KPIs */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 12, marginBottom: 20 }}>
+                      {[
+                        { label: "CA Réalisé", sublabel: "Factures émises", value: `${caRealise.toLocaleString()} €`, color: C.accent, bg: C.accentSoft, icon: "📄", sub: `${allInvoices.length} facture${allInvoices.length !== 1 ? "s" : ""}` },
+                        { label: "CA En cours", sublabel: "Devis / contrats validés", value: `${caEnCours.toLocaleString()} €`, color: C.purple, bg: C.purpleSoft, icon: "🔄", sub: `${allInvoices.filter(i => i.status === "pending").length} en attente` },
+                        { label: "Encaissé", sublabel: "Paiements reçus", value: `${encaisse.toLocaleString()} €`, color: C.green, bg: C.greenSoft, icon: "✅", sub: `${allInvoices.filter(i => i.status === "paid").length} payée${allInvoices.filter(i => i.status === "paid").length !== 1 ? "s" : ""}` },
+                        { label: "Delta Fact. / Encaiss.", sublabel: "Non encore encaissé", value: `${delta.toLocaleString()} €`, color: delta > 0 ? C.gold : C.green, bg: delta > 0 ? C.goldSoft : C.greenSoft, icon: delta > 0 ? "⏳" : "✓", sub: delta > 0 ? "À encaisser" : "Tout encaissé" },
+                      ].map((k, i) => (
+                        <div key={i} style={{ backgroundColor: C.card, borderRadius: 14, padding: "16px 18px", border: `1px solid ${C.border}`, position: "relative", overflow: "hidden" }}>
+                          <div style={{ position: "absolute", top: 14, right: 16, fontSize: 22, opacity: .12 }}>{k.icon}</div>
+                          <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8, marginBottom: 2 }}>{k.label}</div>
+                          <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>{k.sublabel}</div>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: k.color, lineHeight: 1 }}>{k.value}</div>
+                          <div style={{ fontSize: 10, color: k.color, marginTop: 6, padding: "2px 8px", borderRadius: 20, backgroundColor: k.bg, display: "inline-block", fontWeight: 600 }}>{k.sub}</div>
+                        </div>
+                      ))}
                     </div>
 
-                    {/* Invoices list */}
-                    <div style={{ backgroundColor: C.card, borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border}` }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "100px 2fr 1.2fr 90px 90px 80px", gap: 6, padding: "9px 14px", fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: .8, textTransform: "uppercase", backgroundColor: C.bgLight, borderBottom: `1px solid ${C.border}` }}>
-                        <span>N° facture</span><span>Description</span><span>Période</span><span style={{ textAlign: "right" }}>Montant</span><span style={{ textAlign: "center" }}>Statut</span><span style={{ textAlign: "center" }}>Action</span>
-                      </div>
-                      {invoices.sort((a, b) => new Date(b.date) - new Date(a.date)).map((inv, i) => {
-                        const st = INV_STATUS[inv.status];
-                        return (
-                          <div key={inv.id} style={{ display: "grid", gridTemplateColumns: "100px 2fr 1.2fr 90px 90px 80px", gap: 6, padding: "11px 14px", fontSize: 12, alignItems: "center", backgroundColor: i % 2 === 0 ? C.card : C.bgLight, borderBottom: `1px solid ${C.border}` }}>
-                            <span style={{ fontWeight: 600, color: C.accent, fontSize: 11 }}>{inv.id}</span>
-                            <div>
-                              <div style={{ fontWeight: 500, color: C.text }}>{inv.description}</div>
-                              <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>
-                                Émise le {new Date(inv.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                                {inv.paidDate && <> · Payée le {new Date(inv.paidDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</>}
-                              </div>
+                    {/* Graphique évolution 6 mois */}
+                    <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "20px 22px", border: `1px solid ${C.border}`, marginBottom: 20 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Évolution mensuelle</div>
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>CA facturé vs encaissé — 6 derniers mois</div>
+                        </div>
+                        <div style={{ display: "flex", gap: 14 }}>
+                          {[{ color: C.accent, label: "Facturé", gradient: true }, { color: C.green, label: "Encaissé" }].map(l => (
+                            <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: C.muted }}>
+                              <div style={{ width: 10, height: 10, borderRadius: 3, background: l.gradient ? `linear-gradient(135deg, ${C.accent}, ${C.lavender})` : l.color }} />
+                              {l.label}
                             </div>
-                            <span style={{ color: C.textSoft }}>{inv.period}</span>
-                            <span style={{ textAlign: "right", fontWeight: 700, color: C.text }}>{inv.amount.toLocaleString()} €</span>
-                            <div style={{ textAlign: "center" }}>
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 20, fontSize: 10, fontWeight: 600, color: st.color, backgroundColor: st.bg, border: `1px solid ${st.color}20` }}>
-                                <span style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: st.color, animation: inv.status === "overdue" ? "pulse 1.5s infinite" : "none" }} />
-                                {st.label}
-                              </span>
-                            </div>
-                            <div style={{ textAlign: "center" }}>
-                              <button onClick={() => fire(`📄 Téléchargement ${inv.id} (simulation)`)} style={{
-                                padding: "5px 10px", borderRadius: 6, border: `1px solid ${C.border}`,
-                                backgroundColor: "transparent", color: C.accent, fontSize: 10,
-                                fontWeight: 600, cursor: "pointer", transition: "all .15s",
-                              }}
-                              onMouseEnter={e => { e.target.style.backgroundColor = C.accentSoft; e.target.style.borderColor = C.accent + "40"; }}
-                              onMouseLeave={e => { e.target.style.backgroundColor = "transparent"; e.target.style.borderColor = C.border; }}>
-                                ↓ PDF
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Upload zone CM only */}
-                    {!isClient && (
-                      <div style={{ marginTop: 20, padding: 24, borderRadius: 14, border: `2px dashed ${C.accent}30`, backgroundColor: C.accentSoft, textAlign: "center", cursor: "pointer", transition: "all .2s" }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent + "60"; e.currentTarget.style.backgroundColor = C.accent + "08"; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = C.accent + "30"; e.currentTarget.style.backgroundColor = C.accentSoft; }}
-                        onClick={() => fire("📎 Zone de dépôt — connecter à Airtable (simulation)")}>
-                        <div style={{ fontSize: 28, marginBottom: 8, opacity: .5 }}>📎</div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: C.accent, marginBottom: 4 }}>Déposer une facture</div>
-                        <div style={{ fontSize: 11, color: C.muted }}>Glissez un PDF ici ou cliquez pour sélectionner un fichier</div>
-                        <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>Le client sera notifié automatiquement par email</div>
-                      </div>
-                    )}
-
-                    {/* Info client */}
-                    {isClient && (
-                      <div style={{ marginTop: 16, padding: 14, borderRadius: 14, backgroundColor: C.accentSoft, border: `1px solid ${C.accent}20` }}>
-                        <div style={{ fontSize: 12, color: C.textSoft }}>
-                          💡 Cliquez sur <strong style={{ color: C.accent }}>↓ PDF</strong> pour télécharger une facture. Pour toute question, contactez votre CM directement.
+                          ))}
                         </div>
                       </div>
-                    )}
+                      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 160, position: "relative", paddingBottom: 20 }}>
+                        {/* Ligne objectif */}
+                        <div style={{ position: "absolute", left: 0, right: 0, bottom: `calc(${(objectifMensuel / maxGraph) * 140}px + 20px)`, borderTop: `2px dashed ${C.accent}50`, zIndex: 1, pointerEvents: "none" }}>
+                          <span style={{ position: "absolute", right: 4, top: -14, fontSize: 9, color: C.accent, fontWeight: 600 }}>Objectif {objectifMensuel.toLocaleString()}€</span>
+                        </div>
+                        {graphData.map((d, i) => (
+                          <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, height: "100%", justifyContent: "flex-end" }}>
+                            <div style={{ width: "100%", display: "flex", gap: 2, alignItems: "flex-end", height: 140, justifyContent: "center" }}>
+                              <div style={{ flex: 1, borderRadius: "4px 4px 0 0", background: d.isCurrentMonth ? `linear-gradient(to top, ${C.accent}, ${C.lavender})` : C.border, height: `${d.facture > 0 ? Math.max((d.facture / maxGraph) * 100, 3) : 0}%`, transition: "height .6s ease" }} title={`Facturé : ${d.facture.toLocaleString()} €`} />
+                              <div style={{ flex: 1, borderRadius: "4px 4px 0 0", backgroundColor: d.isCurrentMonth ? C.green : C.green + "55", height: `${d.encaisse > 0 ? Math.max((d.encaisse / maxGraph) * 100, 3) : 0}%`, transition: "height .6s ease" }} title={`Encaissé : ${d.encaisse.toLocaleString()} €`} />
+                            </div>
+                            <div style={{ fontSize: 10, color: d.isCurrentMonth ? C.accent : C.muted, fontWeight: d.isCurrentMonth ? 700 : 400 }}>{d.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Par client */}
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Par client</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 12 }}>
+                        {clients.map(cl => {
+                          const invoices = factures[cl.id] || [];
+                          const paid = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
+                          const pending = invoices.filter(i => i.status !== "paid").reduce((s, i) => s + i.amount, 0);
+                          const hasOverdue = invoices.some(i => i.status === "overdue");
+                          return (
+                            <div key={cl.id} onClick={() => openClientPage(cl.id)} style={{ backgroundColor: C.card, borderRadius: 14, padding: 16, border: `1px solid ${hasOverdue ? C.red + "40" : C.border}`, cursor: "pointer", transition: "all .2s" }}
+                              onMouseEnter={e => { e.currentTarget.style.borderColor = cl.color; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.borderColor = hasOverdue ? C.red + "40" : C.border; e.currentTarget.style.transform = "translateY(0)"; }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                                <Avatar client={cl} size={28} />
+                                <div><span style={{ fontWeight: 600, fontSize: 14 }}>{cl.name}</span>{hasOverdue && <div style={{ fontSize: 10, color: C.red, fontWeight: 600 }}>⚠ Facture en retard</div>}</div>
+                              </div>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                                <div><div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase" }}>Encaissé</div><div style={{ fontSize: 18, fontWeight: 700, color: C.green }}>{paid.toLocaleString()} €</div></div>
+                                <div><div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase" }}>À facturer</div><div style={{ fontSize: 18, fontWeight: 700, color: pending > 0 ? C.gold : C.muted }}>{pending.toLocaleString()} €</div></div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 );
               })()
-              : !isClient ? (
-                <div>
-                  <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 16 }}>Facturation</h2>
-                  <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Vue d'ensemble par client</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12 }}>
-                    {clients.map(cl => {
-                      const invoices = factures[cl.id] || [];
-                      const paid = invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
-                      const pending = invoices.filter(i => i.status !== "paid").reduce((s, i) => s + i.amount, 0);
-                      const hasOverdue = invoices.some(i => i.status === "overdue");
-                      return (
-                        <div key={cl.id} onClick={() => setSelClient(cl.id)} style={{ backgroundColor: C.card, borderRadius: 14, padding: 16, border: `1px solid ${hasOverdue ? C.red + "40" : C.border}`, cursor: "pointer", transition: "all .2s" }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = cl.color; e.currentTarget.style.transform = "translateY(-2px)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = hasOverdue ? C.red + "40" : C.border; e.currentTarget.style.transform = "translateY(0)"; }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                            <Avatar client={cl} size={28} />
-                            <div>
-                              <span style={{ fontWeight: 600, fontSize: 14 }}>{cl.name}</span>
-                              {hasOverdue && <div style={{ fontSize: 10, color: C.red, fontWeight: 600 }}>⚠ Facture en retard</div>}
-                            </div>
-                          </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                            <div><div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase" }}>Payé</div><div style={{ fontSize: 18, fontWeight: 700, color: C.green }}>{paid.toLocaleString()} €</div></div>
-                            <div><div style={{ fontSize: 9, color: C.muted, fontWeight: 600, textTransform: "uppercase" }}>En attente</div><div style={{ fontSize: 18, fontWeight: 700, color: pending > 0 ? C.gold : C.green }}>{pending.toLocaleString()} €</div></div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : <div style={{ textAlign: "center", padding: 50, color: C.muted }}>Sélectionnez un client</div>}
+              : <div style={{ textAlign: "center", padding: 50, color: C.muted }}>Espace client — voir les factures dans votre fiche</div>}
             </div>
           )}
+
 
           {/* STRATEGY */}
           {tab === "strategy" && (
