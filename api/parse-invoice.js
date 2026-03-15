@@ -38,10 +38,9 @@ export default async function handler(req, res) {
         "Content-Type": "application/json",
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
-        "anthropic-beta": "pdfs-2024-09-25",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-6",
         max_tokens: 1024,
         system: `Tu es un assistant spécialisé dans l'extraction de données de factures.
 Tu dois analyser le PDF fourni et extraire les informations clés.
