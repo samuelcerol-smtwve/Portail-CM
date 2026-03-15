@@ -1,8 +1,24 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { getClients, getPosts, getFactures, getStrategies, updatePostStatus, createClient, createPost, deleteClient, deletePost, setAirtableCredentials, clearAirtableCredentials } from "./airtable.js";
 import { signIn, signOut, getSession, supabase, getCMCredentials } from "./supabase.js";
 
-// ─── UPLOAD IMAGE (Supabase Storage) ───
+// ─── RDV DATA ───
+const RDV_TYPES = {
+  call: { label: "Appel", icon: "📞", color: "#2A8FA8" },
+  visio: { label: "Visio", icon: "🎥", color: "#1E6E84" },
+  meeting: { label: "Rendez-vous", icon: "🤝", color: "#C8A06A" },
+  review: { label: "Bilan mensuel", icon: "📊", color: "#4A9E62" },
+  brief: { label: "Brief", icon: "📋", color: "#D4886B" },
+};
+
+const INITIAL_RDVS = [
+  { id: 1, clientId: 1, type: "review", title: "Bilan mensuel Maison Soleil", date: "2026-03-18", time: "10:00", duration: "1h", location: "Visio", notes: "Revoir stratégie outdoor pour avril" },
+  { id: 2, clientId: 3, type: "brief", title: "Brief lancement abonnements Flora", date: "2026-03-20", time: "14:30", duration: "45min", location: "Visio", notes: "" },
+  { id: 3, clientId: 2, type: "call", title: "Point soirée jazz Café Indigo", date: "2026-03-22", time: "11:00", duration: "30min", location: "Téléphone", notes: "" },
+  { id: 4, clientId: 4, type: "visio", title: "Présentation stratégie e-com Brume", date: "2026-03-25", time: "16:00", duration: "1h30", location: "Teams", notes: "" },
+];
+
+
 async function uploadImage(file) {
   const ext = file.name.split(".").pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -621,6 +637,24 @@ export default function App() {
   const [cmProfile, setCmProfile] = useState(null);
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
+
+  // ─── RDV STATE ───
+  const [rdvs, setRdvs] = useState(INITIAL_RDVS);
+  const [showAddRdv, setShowAddRdv] = useState(false);
+  const [newRdv, setNewRdv] = useState({ clientId: "", type: "call", title: "", date: "", time: "10:00", duration: "1h", location: "", notes: "" });
+
+  // ─── POMODORO STATE ───
+  const [pTime, setPTime] = useState(25 * 60);
+  const [pRun, setPRun] = useState(false);
+  const [pMode, setPMode] = useState("work");
+  const [pCount, setPCount] = useState(0);
+  const pRef = useRef();
+
+  // ─── AI STATE ───
+  const [aiMsgs, setAiMsgs] = useState([{ role: "assistant", content: "👋 Bonjour ! Je suis ton assistante CM. Demande-moi des idées de contenu, des captions, des stratégies ou de l'aide pour planifier ta semaine !" }]);
+  const [aiIn, setAiIn] = useState("");
+  const [aiLoad, setAiLoad] = useState(false);
+  const chatRef = useRef();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showNewClient, setShowNewClient] = useState(false);
   const [showNewPost, setShowNewPost] = useState(false);
@@ -731,7 +765,55 @@ export default function App() {
 
 
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(null), 2500); return () => clearTimeout(t); } }, [toast]);
+
+  // ─── POMODORO EFFECT ───
+  useEffect(() => {
+    if (pRun) {
+      pRef.current = setInterval(() => setPTime(t => {
+        if (t <= 1) {
+          setPRun(false);
+          if (pMode === "work") { setPCount(c => c + 1); setPMode("break"); return 5 * 60; }
+          else { setPMode("work"); return 25 * 60; }
+        }
+        return t - 1;
+      }), 1000);
+    }
+    return () => clearInterval(pRef.current);
+  }, [pRun, pMode]);
+
+  useEffect(() => { chatRef.current?.scrollIntoView({ behavior: "smooth" }); }, [aiMsgs]);
   const fire = (msg, type) => setToast({ msg, type });
+
+  // ─── AI SEND ───
+  const sendAI = async () => {
+    if (!aiIn.trim() || aiLoad) return;
+    const um = { role: "user", content: aiIn };
+    setAiMsgs(m => [...m, um]); setAiIn(""); setAiLoad(true);
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514", max_tokens: 1000,
+          system: `Tu es une assistante expert Community Management pour "Petit bout de com", une agence CM indépendante. Aide la CM avec ses clients, ses contenus et ses stratégies. Réponds en français avec des emojis. Clients actuels : ${clients.map(c => c.name).join(", ")}.`,
+          messages: [...aiMsgs, um].map(m => ({ role: m.role, content: m.content }))
+        })
+      });
+      const d = await r.json();
+      setAiMsgs(m => [...m, { role: "assistant", content: d.content?.[0]?.text || "Erreur de réponse." }]);
+    } catch { setAiMsgs(m => [...m, { role: "assistant", content: "⚠️ Erreur de connexion à l'API." }]); }
+    setAiLoad(false);
+  };
+
+  // ─── RDV HELPERS ───
+  const addRdv = () => {
+    if (!newRdv.title || !newRdv.date) return;
+    setRdvs(r => [...r, { ...newRdv, id: Date.now(), clientId: newRdv.clientId || (clients[0]?.id) }]);
+    setNewRdv({ clientId: "", type: "call", title: "", date: "", time: "10:00", duration: "1h", location: "", notes: "" });
+    setShowAddRdv(false);
+    fire("📅 RDV ajouté");
+  };
+  const delRdv = id => setRdvs(r => r.filter(x => x.id !== id));
+  const fmtSecs = s => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   const approve = async (id) => {
     const post = posts.find(p => p.id === id);
@@ -907,7 +989,7 @@ export default function App() {
   const stats = { total: posts.length, pending: posts.filter(p => p.status === "pending").length, late: posts.filter(p => p.status === "late").length, approved: posts.filter(p => p.status === "approved").length, revision: posts.filter(p => p.status === "revision").length };
 
   const findClient = (id) => clients.find(c => c.id === id || c.airtableId === id);
-  const cmTabs = [{ id: "dashboard", icon: "📊", label: "Dashboard" }, { id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Posts" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Facturation" }, { id: "strategy", icon: "🎯", label: "Stratégie" }, { id: "workflows", icon: "🔔", label: "Relances clients" }];
+  const cmTabs = [{ id: "dashboard", icon: "📊", label: "Dashboard" }, { id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Posts" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Facturation" }, { id: "strategy", icon: "🎯", label: "Stratégie" }, { id: "rdv", icon: "📞", label: "Rendez-vous" }, { id: "assistant", icon: "🤖", label: "Assistante IA" }, { id: "pomodoro", icon: "⏱️", label: "Pomodoro" }, { id: "workflows", icon: "🔔", label: "Relances clients" }];
   const clientTabs = [{ id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Contenus" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Factures" }, { id: "strategy", icon: "🎯", label: "Stratégie" }];
   const tabs = isClient ? clientTabs : cmTabs;
 
@@ -1510,6 +1592,178 @@ export default function App() {
                     </div>
                   ))}
                 </div></div>}
+            </div>
+          )}
+
+          {/* RDV */}
+          {tab === "rdv" && !isClient && (
+            <div style={{ animation: "fadeIn .3s ease" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                <div>
+                  <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22 }}>Rendez-vous</h2>
+                  <p style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Appels, visios et bilans clients</p>
+                </div>
+                <button onClick={() => { setShowAddRdv(!showAddRdv); if (!newRdv.clientId && clients.length) setNewRdv(r => ({...r, clientId: clients[0].id})); }} style={{ padding: "9px 18px", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer", boxShadow: `0 2px 8px ${C.accentGlow}` }}>
+                  + Nouveau RDV
+                </button>
+              </div>
+
+              {showAddRdv && (
+                <div style={{ backgroundColor: C.card, borderRadius: 14, padding: 18, marginBottom: 20, border: `1px solid ${C.accent}30` }}>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: C.accent, marginBottom: 14 }}>Nouveau rendez-vous</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <input value={newRdv.title} onChange={e => setNewRdv(r => ({...r, title: e.target.value}))} placeholder="Titre du RDV *" style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: C.bgLight, color: C.text, fontSize: 12, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+                    </div>
+                    <select value={newRdv.clientId} onChange={e => setNewRdv(r => ({...r, clientId: e.target.value}))} style={{ padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: C.bgLight, color: C.text, fontSize: 12, fontFamily: "inherit", outline: "none" }}>
+                      <option value="">— Client —</option>
+                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <select value={newRdv.type} onChange={e => setNewRdv(r => ({...r, type: e.target.value}))} style={{ padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: C.bgLight, color: C.text, fontSize: 12, fontFamily: "inherit", outline: "none" }}>
+                      {Object.entries(RDV_TYPES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+                    </select>
+                    <input type="date" value={newRdv.date} onChange={e => setNewRdv(r => ({...r, date: e.target.value}))} style={{ padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: C.bgLight, color: C.text, fontSize: 12, fontFamily: "inherit", outline: "none" }} />
+                    <input type="time" value={newRdv.time} onChange={e => setNewRdv(r => ({...r, time: e.target.value}))} style={{ padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: C.bgLight, color: C.text, fontSize: 12, fontFamily: "inherit", outline: "none" }} />
+                    <input value={newRdv.duration} onChange={e => setNewRdv(r => ({...r, duration: e.target.value}))} placeholder="Durée (ex: 1h30)" style={{ padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: C.bgLight, color: C.text, fontSize: 12, fontFamily: "inherit", outline: "none" }} />
+                    <input value={newRdv.location} onChange={e => setNewRdv(r => ({...r, location: e.target.value}))} placeholder="Lieu / Visio / Téléphone" style={{ padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: C.bgLight, color: C.text, fontSize: 12, fontFamily: "inherit", outline: "none" }} />
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <textarea value={newRdv.notes} onChange={e => setNewRdv(r => ({...r, notes: e.target.value}))} placeholder="Notes (ordre du jour, points à aborder...)" style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: C.bgLight, color: C.text, fontSize: 12, fontFamily: "inherit", outline: "none", resize: "vertical", minHeight: 56, boxSizing: "border-box" }} />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={addRdv} style={{ padding: "8px 18px", borderRadius: 8, border: "none", backgroundColor: C.accent, color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>Ajouter</button>
+                    <button onClick={() => setShowAddRdv(false)} style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 12, cursor: "pointer" }}>Annuler</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Prochains RDVs */}
+              {(() => {
+                const today = new Date().toISOString().split("T")[0];
+                const upcoming = rdvs.filter(r => r.date >= today).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+                const past = rdvs.filter(r => r.date < today).sort((a, b) => b.date.localeCompare(a.date));
+                const RdvRow = ({ r, isPast }) => {
+                  const cl = clients.find(c => String(c.id) === String(r.clientId));
+                  const rt = RDV_TYPES[r.type] || RDV_TYPES.call;
+                  return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 14px", borderBottom: `1px solid ${C.border}`, opacity: isPast ? 0.55 : 1 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: rt.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{rt.icon}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{r.title}</div>
+                        <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
+                          {cl && <><span style={{ fontWeight: 600, color: cl.color }}>{cl.name}</span> · </>}
+                          {r.date.split("-").reverse().join("/")} à {r.time} · {r.duration}
+                          {r.location && <> · <span style={{ color: C.accent }}>{r.location}</span></>}
+                        </div>
+                        {r.notes && <div style={{ fontSize: 10, color: C.muted, marginTop: 2, fontStyle: "italic" }}>{r.notes}</div>}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: rt.color, backgroundColor: rt.color + "15", padding: "2px 8px", borderRadius: 20, border: `1px solid ${rt.color}25`, whiteSpace: "nowrap" }}>{rt.label}</span>
+                        <button onClick={() => delRdv(r.id)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 15, padding: "2px 5px", borderRadius: 6, lineHeight: 1 }}>×</button>
+                      </div>
+                    </div>
+                  );
+                };
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                    {upcoming.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>À venir</div>
+                        <div style={{ backgroundColor: C.card, borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                          {upcoming.map(r => <RdvRow key={r.id} r={r} isPast={false} />)}
+                        </div>
+                      </div>
+                    )}
+                    {past.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 10 }}>Passés</div>
+                        <div style={{ backgroundColor: C.card, borderRadius: 14, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                          {past.map(r => <RdvRow key={r.id} r={r} isPast={true} />)}
+                        </div>
+                      </div>
+                    )}
+                    {rdvs.length === 0 && <div style={{ textAlign: "center", padding: 50, color: C.muted }}><div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>Aucun RDV planifié</div>}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* ASSISTANT IA */}
+          {tab === "assistant" && !isClient && (
+            <div style={{ animation: "fadeIn .3s ease", display: "flex", flexDirection: "column", height: "calc(100vh - 160px)" }}>
+              <div style={{ marginBottom: 14 }}>
+                <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 4 }}>Assistante IA</h2>
+                <p style={{ fontSize: 12, color: C.muted }}>Idées de contenu, captions, stratégies, planning — demande-moi tout !</p>
+              </div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+                {["💡 Idées posts Instagram", "📝 Caption pour TikTok", "📊 Stratégie de la semaine", "🎯 Meilleurs hashtags", "⏰ Meilleurs créneaux"].map(q => (
+                  <button key={q} onClick={() => setAiIn(q)} style={{ padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${C.border}`, backgroundColor: C.accentSoft, color: C.accent, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{q}</button>
+                ))}
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: "4px 0", marginBottom: 12 }}>
+                {aiMsgs.map((msg, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
+                    <div style={{ maxWidth: "82%", padding: "11px 14px", borderRadius: msg.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px", backgroundColor: msg.role === "user" ? C.accent : C.card, color: msg.role === "user" ? "#fff" : C.text, fontSize: 12, lineHeight: 1.65, border: msg.role === "user" ? "none" : `1px solid ${C.border}`, whiteSpace: "pre-wrap", animation: "fadeIn .25s ease" }}>
+                      {msg.role === "assistant" && <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, marginBottom: 5, letterSpacing: 0.5 }}>✦ ASSISTANTE CM</div>}
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {aiLoad && (
+                  <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 10 }}>
+                    <div style={{ padding: "11px 16px", borderRadius: "14px 14px 14px 4px", backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, marginBottom: 5 }}>✦ ASSISTANTE CM</div>
+                      <span style={{ color: C.accent, animation: "pulse 1.5s infinite", fontSize: 16 }}>✦ ✦ ✦</span>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatRef} />
+              </div>
+              <div style={{ display: "flex", gap: 8, backgroundColor: C.card, border: `1.5px solid ${C.border}`, borderRadius: 14, padding: 10 }}>
+                <input value={aiIn} onChange={e => setAiIn(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendAI()} placeholder="Demande une idée de post, une caption, une stratégie..." style={{ flex: 1, background: "transparent", border: "none", color: C.text, fontSize: 12, outline: "none", fontFamily: "inherit" }} />
+                <button onClick={sendAI} disabled={aiLoad || !aiIn.trim()} style={{ padding: "8px 16px", borderRadius: 10, border: "none", background: aiLoad || !aiIn.trim() ? C.border : `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 600, fontSize: 12, cursor: aiLoad || !aiIn.trim() ? "default" : "pointer", opacity: aiLoad || !aiIn.trim() ? 0.5 : 1, transition: "all .15s" }}>
+                  Envoyer →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* POMODORO */}
+          {tab === "pomodoro" && !isClient && (
+            <div style={{ animation: "fadeIn .3s ease", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 30 }}>
+              <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, marginBottom: 4 }}>Pomodoro</h2>
+              <p style={{ fontSize: 12, color: C.muted, marginBottom: 36 }}>Focus 25 min · Pause 5 min · Répète</p>
+              <div style={{ position: "relative", marginBottom: 32 }}>
+                <svg width={240} height={240} style={{ transform: "rotate(-90deg)" }}>
+                  <circle cx={120} cy={120} r={104} fill="none" stroke={C.border} strokeWidth={12} />
+                  <circle cx={120} cy={120} r={104} fill="none"
+                    stroke={pMode === "work" ? C.accent : "#4A9E62"} strokeWidth={12} strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 104}
+                    strokeDashoffset={2 * Math.PI * 104 * (1 - pTime / (pMode === "work" ? 25 * 60 : 5 * 60))}
+                    style={{ transition: "stroke-dashoffset 1s linear", filter: `drop-shadow(0 0 8px ${pMode === "work" ? C.accentGlow : "#4A9E6240"})` }} />
+                </svg>
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>{pMode === "work" ? "⚡ Focus" : "☕ Pause"}</div>
+                  <div style={{ fontSize: 46, fontWeight: 700, color: pMode === "work" ? C.accent : "#4A9E62", fontFamily: "'Playfair Display',serif", lineHeight: 1 }}>{fmtSecs(pTime)}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Session #{pCount + 1}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
+                <button onClick={() => setPRun(r => !r)} style={{ padding: "12px 32px", borderRadius: 14, border: pRun ? `2px solid ${C.accent}` : "none", background: pRun ? "transparent" : `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: pRun ? C.accent : "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", boxShadow: pRun ? "none" : `0 4px 16px ${C.accentGlow}`, fontFamily: "'DM Sans',sans-serif", transition: "all .2s" }}>
+                  {pRun ? "⏸ Pause" : "▶ Démarrer"}
+                </button>
+                <button onClick={() => { setPRun(false); setPTime(25 * 60); setPMode("work"); }} style={{ padding: "12px 20px", borderRadius: 14, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontWeight: 600, fontSize: 15, cursor: "pointer" }}>↺ Reset</button>
+              </div>
+              <div style={{ backgroundColor: C.card, borderRadius: 16, padding: "18px 24px", border: `1px solid ${C.border}`, textAlign: "center", minWidth: 320 }}>
+                <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 12 }}>Sessions complétées</div>
+                <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 12 }}>
+                  {Array.from({ length: 8 }, (_, i) => (
+                    <div key={i} style={{ width: 26, height: 26, borderRadius: 8, background: i < pCount ? `linear-gradient(135deg, ${C.accent}, ${C.lavender})` : C.bgLight, border: `1px solid ${i < pCount ? C.accent + "40" : C.border}`, boxShadow: i < pCount ? `0 2px 8px ${C.accentGlow}` : "none", transition: "all .3s" }} />
+                  ))}
+                </div>
+                <div style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>{pCount} pomodoros · ~{pCount * 25} min de focus</div>
+              </div>
             </div>
           )}
 
