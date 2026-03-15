@@ -595,34 +595,63 @@ function CalendarView({ posts, rdvs, clients, calSel, setCalSel, isClient, appro
               const isToday = isCurrentMonth && day === today.getDate();
               const isPast = day && new Date(year, month, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
               const hasSelected = dp.some(p => p.id === calSel) || dr.some(r => r.id === selRdv);
+              const totalItems = dp.length + dr.length;
 
               return (
-                <div key={i} style={{ minHeight: 82, padding: 5, backgroundColor: hasSelected ? C.accentSoft + "80" : day ? C.card : C.bgLight }}>
+                <div key={i} style={{ minHeight: 100, padding: "5px 4px", backgroundColor: hasSelected ? C.accentSoft + "50" : day ? C.card : C.bgLight }}>
                   {day && <>
-                    <div style={{ fontSize: 10, fontWeight: isToday ? 700 : 400, color: isToday ? "#fff" : isPast ? C.muted : C.text, marginBottom: 3, ...(isToday ? { backgroundColor: C.accent, width: 18, height: 18, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 } : {}) }}>{day}</div>
+                    {/* Numéro du jour */}
+                    <div style={{ marginBottom: 4, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ fontSize: 11, fontWeight: isToday ? 700 : 500, color: isToday ? "#fff" : isPast ? C.muted : C.text, ...(isToday ? { backgroundColor: C.accent, width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 } : {}) }}>{day}</div>
+                      {totalItems > 0 && <span style={{ fontSize: 8, color: C.muted, fontWeight: 600 }}>{totalItems}</span>}
+                    </div>
 
                     {/* Posts */}
-                    {dp.slice(0, 3).map(p => (
-                      <button key={p.id} onClick={() => { setCalSel(p.id); setSelRdv(null); }}
-                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 3, padding: "2px 4px", marginBottom: 1, borderRadius: 5, border: calSel === p.id ? `1px solid ${C.accent}` : `1px solid transparent`, backgroundColor: calSel === p.id ? C.accentSoft : STATUSES[p.status]?.bg || C.bgLight, cursor: "pointer", fontSize: 9, color: C.text, textAlign: "left", transition: "all .1s" }}>
-                        <Dot color={STATUSES[p.status]?.color || C.muted} pulse={p.status === "late"} />
-                        <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{NETWORKS[p.network]?.short || "?"}</span>
-                      </button>
-                    ))}
-                    {dp.length > 3 && <div style={{ fontSize: 8, color: C.muted, paddingLeft: 4 }}>+{dp.length - 3}</div>}
+                    {dp.slice(0, 2).map(p => {
+                      const cl = clients.find(c => c.id === p.clientId);
+                      const net = NETWORKS[p.network];
+                      const statusColor = STATUSES[p.status]?.color || C.muted;
+                      const statusBg = STATUSES[p.status]?.bg || C.bgLight;
+                      return (
+                        <button key={p.id} onClick={() => { setCalSel(p.id); setSelRdv(null); }}
+                          style={{ width: "100%", textAlign: "left", padding: "4px 6px", marginBottom: 2, borderRadius: 6, border: calSel === p.id ? `1.5px solid ${statusColor}` : `1px solid ${statusColor}30`, backgroundColor: calSel === p.id ? statusBg : statusBg + "80", cursor: "pointer", transition: "all .1s", display: "block" }}>
+                          {/* Ligne 1 : réseau + client */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 2 }}>
+                            <span style={{ fontSize: 9, color: net?.color || C.accent }}>{net?.icon}</span>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: net?.color || C.accent, lineHeight: 1 }}>{net?.short}</span>
+                            {cl && !isClient && <span style={{ fontSize: 8, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 50 }}>· {cl.name}</span>}
+                            <div style={{ marginLeft: "auto", width: 5, height: 5, borderRadius: "50%", backgroundColor: statusColor, flexShrink: 0 }} />
+                          </div>
+                          {/* Ligne 2 : aperçu caption */}
+                          {p.caption && <div style={{ fontSize: 8, color: C.textSoft, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", wordBreak: "break-word" }}>{p.caption.replace(/\n/g, " ").slice(0, 45)}{p.caption.length > 45 ? "…" : ""}</div>}
+                        </button>
+                      );
+                    })}
+                    {dp.length > 2 && (
+                      <div style={{ fontSize: 8, color: C.muted, paddingLeft: 4, marginBottom: 2, fontWeight: 600 }}>+{dp.length - 2} post{dp.length - 2 > 1 ? "s" : ""}</div>
+                    )}
 
                     {/* RDVs */}
                     {dr.slice(0, 2).map(r => {
                       const rt = RDV_TYPES[r.type] || RDV_TYPES.call;
+                      const cl = clients.find(c => String(c.id) === String(r.clientId));
                       return (
                         <button key={r.id} onClick={() => { setSelRdv(r.id); setCalSel(null); }}
-                          style={{ width: "100%", display: "flex", alignItems: "center", gap: 3, padding: "2px 4px", marginBottom: 1, borderRadius: 5, border: selRdv === r.id ? `1px solid #7C3AED` : `1px solid transparent`, backgroundColor: selRdv === r.id ? "#7C3AED14" : "#7C3AED10", cursor: "pointer", fontSize: 9, color: C.text, textAlign: "left", transition: "all .1s" }}>
-                          <div style={{ width: 6, height: 6, borderRadius: 2, backgroundColor: "#7C3AED", flexShrink: 0 }} />
-                          <span style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.time}</span>
+                          style={{ width: "100%", textAlign: "left", padding: "4px 6px", marginBottom: 2, borderRadius: 6, border: selRdv === r.id ? `1.5px solid #7C3AED` : `1px solid #7C3AED30`, backgroundColor: selRdv === r.id ? "#7C3AED18" : "#7C3AED0A", cursor: "pointer", transition: "all .1s", display: "block" }}>
+                          {/* Ligne 1 : icône + heure */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 3, marginBottom: 1 }}>
+                            <span style={{ fontSize: 9 }}>{rt.icon}</span>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: "#7C3AED" }}>{r.time}</span>
+                            {cl && <span style={{ fontSize: 8, color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 50 }}>· {cl.name}</span>}
+                          </div>
+                          {/* Ligne 2 : titre RDV */}
+                          <div style={{ fontSize: 8, color: "#5B21B6", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</div>
                         </button>
                       );
                     })}
-                    {dr.length > 2 && <div style={{ fontSize: 8, color: C.muted, paddingLeft: 4 }}>+{dr.length - 2}</div>}
+                    {dr.length > 2 && (
+                      <div style={{ fontSize: 8, color: C.muted, paddingLeft: 4, fontWeight: 600 }}>+{dr.length - 2} RDV</div>
+                    )}
                   </>}
                 </div>
               );
