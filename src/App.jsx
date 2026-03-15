@@ -32,35 +32,39 @@ async function uploadImage(file) {
   return publicUrl;
 }
 
-// ─── PALETTE (Garden-inspired: dark bg, warm coral/pink accents, organic feel) ───
+// ─── PALETTE (PBC Studio — rose/violet, clean white) ───
 const C = {
   bg: "#FFFFFF",
-  bgLight: "#F8F6FB",
+  bgLight: "#FDF5F8",
   card: "#FFFFFF",
-  cardHover: "#FBF9FD",
-  text: "#1A1A1A",
-  textSoft: "#4A4550",
-  muted: "#9590A0",
-  border: "#E8E4F0",
-  borderLight: "#D5D0E0",
-  accent: "#2A8FA8",
-  accentSoft: "#2A8FA814",
-  accentGlow: "#2A8FA835",
+  cardHover: "#FFF8FA",
+  text: "#1A1020",
+  textSoft: "#4A3550",
+  muted: "#A090A8",
+  border: "#F0E0EA",
+  borderLight: "#E8D0E0",
+  accent: "#E0387A",
+  accentSoft: "#E0387A14",
+  accentGlow: "#E0387A35",
   gold: "#C8A06A",
   goldSoft: "#C8A06A12",
   green: "#4A9E62",
   greenSoft: "#4A9E6212",
-  orange: "#D4886B",
-  orangeSoft: "#D4886B12",
+  orange: "#E07838",
+  orangeSoft: "#E0783812",
   red: "#D45B5B",
   redSoft: "#D45B5B12",
-  purple: "#1E6E84",
-  purpleSoft: "#2A8FA814",
+  purple: "#7C3AED",
+  purpleSoft: "#7C3AED12",
   blue: "#5B8EC4",
   blueSoft: "#5B8EC412",
-  cream: "#F5F0E8",
-  lavender: "#7CCFDF",
-  lavenderSoft: "#7CCFDF14",
+  cream: "#FDF0F5",
+  lavender: "#F02D7D",
+  lavenderSoft: "#F02D7D14",
+  sidebarBg: "#1A0A1E",
+  sidebarAccent: "#F472B6",
+  sidebarMuted: "#C4A0C8",
+  sidebarActive: "rgba(240,45,125,0.2)",
 };
 
 const CLIENTS = [
@@ -598,7 +602,7 @@ function LoginPage({ onLogin }) {
       <div style={{ width: 380, backgroundColor: C.card, borderRadius: 24, padding: 40, boxShadow: "0 20px 60px rgba(0,0,0,.08)", border: `1px solid ${C.border}`, position: "relative", overflow: "hidden" }}>
         <FloralCorner style={{ width: 150, top: -30, right: -20 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 32 }}>
-          <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2A8FA8", boxShadow: `0 0 12px ${C.accentGlow}` }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: C.accent, boxShadow: `0 0 12px ${C.accentGlow}` }} />
           <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: C.text }}>Mon espace</span>
         </div>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 6 }}>Connexion</h2>
@@ -989,8 +993,8 @@ export default function App() {
   const stats = { total: posts.length, pending: posts.filter(p => p.status === "pending").length, late: posts.filter(p => p.status === "late").length, approved: posts.filter(p => p.status === "approved").length, revision: posts.filter(p => p.status === "revision").length };
 
   const findClient = (id) => clients.find(c => c.id === id || c.airtableId === id);
-  const cmTabs = [{ id: "dashboard", icon: "📊", label: "Dashboard" }, { id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Posts" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Facturation" }, { id: "strategy", icon: "🎯", label: "Stratégie" }, { id: "rdv", icon: "📞", label: "Rendez-vous" }, { id: "assistant", icon: "🤖", label: "Assistante IA" }, { id: "pomodoro", icon: "⏱️", label: "Pomodoro" }, { id: "workflows", icon: "🔔", label: "Relances clients" }];
-  const clientTabs = [{ id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Contenus" }, { id: "stats", icon: "📈", label: "Statistiques" }, { id: "billing", icon: "🧾", label: "Factures" }, { id: "strategy", icon: "🎯", label: "Stratégie" }];
+  const cmTabs = [{ id: "dashboard", icon: "📊", label: "Dashboard" }, { id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Posts" }, { id: "billing", icon: "🧾", label: "Facturation" }, { id: "rdv", icon: "📞", label: "Rendez-vous" }, { id: "assistant", icon: "🤖", label: "Assistante IA" }, { id: "pomodoro", icon: "⏱️", label: "Pomodoro" }, { id: "workflows", icon: "🔔", label: "Relances clients" }];
+  const clientTabs = [{ id: "calendar", icon: "📅", label: "Calendrier" }, { id: "posts", icon: "📋", label: "Contenus" }, { id: "billing", icon: "🧾", label: "Factures" }];
   const tabs = isClient ? clientTabs : cmTabs;
 
   // Afficher login si mode client et pas connecté
@@ -1017,11 +1021,11 @@ export default function App() {
       <div style={{ background: `linear-gradient(135deg, #FFFFFF 0%, ${C.bgLight} 50%, #FFFFFF 100%)`, borderBottom: `1px solid ${C.border}`, padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 58, position: "relative", overflow: "hidden" }}>
         <FloralCorner style={{ width: 140, top: -25, right: 50 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
-          <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#2A8FA8", boxShadow: `0 0 12px ${C.accentGlow}` }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#0A2E3F", letterSpacing: -0.5 }}>
-            {isClient ? "Mon espace" : cmProfile?.name ? `Espace CM — ${cmProfile.name}` : "Espace CM"}
+          <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: C.accent, boxShadow: `0 0 12px ${C.accentGlow}` }} />
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: -0.5 }}>
+            {isClient ? "Mon espace" : cmProfile?.name ? `Espace CM — ${cmProfile.name}` : "petit bout de com"}
           </span>
-          {isClient && selClient && <span style={{ fontSize: 12, color: "#4A9BB0", fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
+          {isClient && selClient && <span style={{ fontSize: 12, color: C.accent, fontWeight: 400 }}>— {clients.find(c => c.id === selClient)?.name}</span>}
           {loading && <span style={{ fontSize: 10, color: C.muted, marginLeft: 8, animation: "pulse 1s infinite" }}>⟳ Chargement...</span>}
           <button onClick={() => setSidebarOpen(o => !o)} style={{ marginLeft: 8, padding: "5px 8px", border: `1px solid ${C.border}`, borderRadius: 8, backgroundColor: "transparent", color: C.muted, fontSize: 16, cursor: "pointer", lineHeight: 1, display: "flex", alignItems: "center" }} title="Menu">
             {sidebarOpen ? "☰" : "☰"}
@@ -1029,7 +1033,7 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, zIndex: 1 }}>
           <span style={{ fontSize: 11, color: C.muted }}>{authUser?.email}</span>
-          <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 20, backgroundColor: isClient ? C.accent + "20" : "#0A2E3F", color: isClient ? C.accent : "#7CCFDF", fontWeight: 700, border: `1px solid ${isClient ? C.accent + "40" : "#7CCFDF40"}` }}>
+          <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 20, backgroundColor: isClient ? C.accentSoft : C.sidebarBg, color: isClient ? C.accent : C.sidebarAccent, fontWeight: 700, border: `1px solid ${isClient ? C.accent + "40" : C.sidebarAccent + "40"}` }}>
             {isClient ? "👤 Client" : "👩‍💻 CM"}
           </span>
           <button onClick={handleLogout} style={{ padding: "6px 14px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
@@ -1040,19 +1044,19 @@ export default function App() {
 
       <div style={{ display: "flex", minHeight: "calc(100vh - 58px)" }}>
         {/* ─── SIDEBAR ─── */}
-        <div style={{ width: sidebarOpen ? 218 : 0, minWidth: sidebarOpen ? 218 : 0, background: "#0A2E3F", border: "none", padding: sidebarOpen ? "14px 0" : 0, flexShrink: 0, boxShadow: "4px 0 20px rgba(0,0,0,0.18)", overflow: "hidden", transition: "all .25s ease" }}>
+        <div style={{ width: sidebarOpen ? 218 : 0, minWidth: sidebarOpen ? 218 : 0, background: C.sidebarBg, border: "none", padding: sidebarOpen ? "14px 0" : 0, flexShrink: 0, boxShadow: "4px 0 20px rgba(0,0,0,0.25)", overflow: "hidden", transition: "all .25s ease" }}>
           <div style={{ marginBottom: 16 }}>
             {tabs.map(t => (
-              <button key={t.id} onClick={() => { setTab(t.id); setCalSel(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 18px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 600 : 400, backgroundColor: tab === t.id ? "rgba(42,143,168,0.2)" : "transparent", color: tab === t.id ? "#7CCFDF" : "#5BAFC0", borderLeft: tab === t.id ? "3px solid #7CCFDF" : "3px solid transparent", transition: "all .15s" }}>
+              <button key={t.id} onClick={() => { setTab(t.id); setCalSel(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 18px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 600 : 400, backgroundColor: tab === t.id ? C.sidebarActive : "transparent", color: tab === t.id ? C.sidebarAccent : C.sidebarMuted, borderLeft: tab === t.id ? `3px solid ${C.sidebarAccent}` : "3px solid transparent", transition: "all .15s" }}>
                 <span style={{ fontSize: 14 }}>{t.icon}</span> {t.label}
               </button>
             ))}
           </div>
           <div style={{ padding: "0 18px", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, color: "#4A9BB0", letterSpacing: 1.2, textTransform: "uppercase" }}>{isClient ? "Simuler" : "Clients"}</span>
-            {!isClient && <button onClick={() => setShowNewClient(true)} style={{ fontSize: 18, lineHeight: 1, border: "none", background: "none", color: "#7CCFDF", cursor: "pointer", fontWeight: 700, padding: "0 2px" }} title="Nouveau client">+</button>}
+            <span style={{ fontSize: 9, fontWeight: 700, color: C.sidebarMuted, letterSpacing: 1.2, textTransform: "uppercase" }}>{isClient ? "Simuler" : "Clients"}</span>
+            {!isClient && <button onClick={() => setShowNewClient(true)} style={{ fontSize: 18, lineHeight: 1, border: "none", background: "none", color: C.sidebarAccent, cursor: "pointer", fontWeight: 700, padding: "0 2px" }} title="Nouveau client">+</button>}
           </div>
-          {!isClient && <button onClick={() => setSelClient(null)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: !selClient ? "rgba(42,143,168,0.2)" : "transparent", color: !selClient ? "#E0F8FF" : "#5BAFC0", fontWeight: !selClient ? 600 : 400, borderRadius: 6 }}>Tous</button>}
+          {!isClient && <button onClick={() => setSelClient(null)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: !selClient ? C.sidebarActive : "transparent", color: !selClient ? "#FFD6E8" : C.sidebarMuted, fontWeight: !selClient ? 600 : 400, borderRadius: 6 }}>Tous</button>}
           {/* En mode client connecté, afficher uniquement son compte */}
           {isClient && authUser ? (
             selClient && (() => {
@@ -1069,22 +1073,22 @@ export default function App() {
               <div key={c.id} style={{ display: "flex", alignItems: "center", paddingRight: 8 }}
                 onMouseEnter={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "1"; }}
                 onMouseLeave={e => { const btn = e.currentTarget.querySelector(".del-btn"); if(btn) btn.style.opacity = "0"; }}>
-                <button onClick={() => setSelClient(c.id)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: selClient === c.id ? "rgba(42,143,168,0.2)" : "transparent", color: selClient === c.id ? "#E0F8FF" : "#5BAFC0", fontWeight: selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
+                <button onClick={() => setSelClient(c.id)} style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, padding: "7px 18px", border: "none", cursor: "pointer", fontSize: 11, backgroundColor: selClient === c.id ? C.sidebarActive : "transparent", color: selClient === c.id ? "#FFD6E8" : C.sidebarMuted, fontWeight: selClient === c.id ? 600 : 400, borderRadius: 6, transition: "all .15s" }}>
                   <Avatar client={c} size={22} /> {c.name}
                 </button>
                 {!isClient && <button className="del-btn" onClick={() => setConfirmDelete(c.id)} style={{ opacity: 0, border: "none", background: "none", cursor: "pointer", fontSize: 13, color: C.red, padding: "4px 6px", borderRadius: 6, transition: "opacity .15s", flexShrink: 0 }} title="Supprimer">🗑</button>}
               </div>
             ))
           )}
-          <div style={{ margin: "16px 14px 0", padding: 12, borderRadius: 12, background: "rgba(42,143,168,0.12)", border: "1px solid rgba(42,143,168,0.3)" }}>
-            <div style={{ fontSize: 9, fontWeight: 800, color: "#7CCFDF", letterSpacing: .8, marginBottom: 2 }}>🔔 Relances actives</div>
-            <div style={{ fontSize: 10, color: "#C0EAF5" }}>6 automatisations</div>
-            <div style={{ fontSize: 9, color: "#4A9BB0" }}>Relance : il y a 2h</div>
+          <div style={{ margin: "16px 14px 0", padding: 12, borderRadius: 12, background: C.sidebarActive, border: `1px solid ${C.sidebarAccent}40` }}>
+            <div style={{ fontSize: 9, fontWeight: 800, color: C.sidebarAccent, letterSpacing: .8, marginBottom: 2 }}>🔔 Relances actives</div>
+            <div style={{ fontSize: 10, color: "#FFD6E8" }}>6 automatisations</div>
+            <div style={{ fontSize: 9, color: C.sidebarMuted }}>Relance : il y a 2h</div>
           </div>
         </div>
 
         {/* ─── MAIN ─── */}
-        <div style={{ flex: 1, padding: 22, overflowY: "auto", maxHeight: "calc(100vh - 58px)", backgroundImage: "url(https://ggoqdgddsppxrrszqrkm.supabase.co/storage/v1/object/public/post-images/bg-portail.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat" }}>
+        <div style={{ flex: 1, padding: 22, overflowY: "auto", maxHeight: "calc(100vh - 58px)", backgroundColor: C.bg }}>
 
           {/* DASHBOARD */}
           {tab === "dashboard" && !isClient && (
