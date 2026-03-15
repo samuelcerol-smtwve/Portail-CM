@@ -841,6 +841,10 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
   const [ficheTab, setFicheTab] = useState("posts");
+  const [tasks, setTasks] = useState([
+    { id: 1, label: "Relancer Maison Soleil", done: false },
+    { id: 2, label: "Créer post Instagram Flora", done: false },
+  ]);
 
   // ─── RDV STATE ───
   const [rdvs, setRdvs] = useState(INITIAL_RDVS);
@@ -1249,6 +1253,43 @@ export default function App() {
       <div style={{ display: "flex", minHeight: "calc(100vh - 58px)" }}>
         {/* ─── SIDEBAR ─── */}
         <div style={{ width: sidebarOpen ? 218 : 0, minWidth: sidebarOpen ? 218 : 0, background: C.sidebarBg, border: "none", padding: sidebarOpen ? "14px 0" : 0, flexShrink: 0, boxShadow: "4px 0 20px rgba(0,0,0,0.25)", overflow: "hidden", transition: "all .25s ease" }}>
+
+          {/* ─── Bandeau date + tâches ─── */}
+          {!isClient && (
+            <div style={{ margin: "0 12px 14px", padding: "10px 12px", borderRadius: 12, background: "linear-gradient(135deg, #E0387A22, #7C3AED22)", border: `1px solid ${C.sidebarAccent}30` }}>
+              <div style={{ fontSize: 10, color: C.sidebarMuted, marginBottom: 6 }}>
+                {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).replace(/^\w/, c => c.toUpperCase())}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#FFD6E8" }}>
+                  {tasks.filter(t => t.done).length}/{tasks.length} tâches
+                </span>
+                <span style={{ fontSize: 13 }}>✓</span>
+              </div>
+              {/* Barre de progression */}
+              <div style={{ marginTop: 8, height: 4, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.1)", overflow: "hidden" }}>
+                <div style={{ height: "100%", borderRadius: 4, background: `linear-gradient(90deg, ${C.accent}, ${C.lavender})`, width: `${tasks.length > 0 ? (tasks.filter(t => t.done).length / tasks.length) * 100 : 0}%`, transition: "width .4s ease" }} />
+              </div>
+              {/* Liste des tâches */}
+              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
+                {tasks.map(t => (
+                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer" }}
+                    onClick={() => setTasks(ts => ts.map(x => x.id === t.id ? { ...x, done: !x.done } : x))}>
+                    <div style={{ width: 14, height: 14, borderRadius: 4, border: `1.5px solid ${t.done ? C.accent : C.sidebarMuted}`, backgroundColor: t.done ? C.accent : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .15s" }}>
+                      {t.done && <span style={{ color: "#fff", fontSize: 9, lineHeight: 1 }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: 11, color: t.done ? C.sidebarMuted : "#FFD6E8", textDecoration: t.done ? "line-through" : "none", lineHeight: 1.3 }}>{t.label}</span>
+                  </div>
+                ))}
+                <button onClick={() => {
+                  const label = window.prompt("Nouvelle tâche :");
+                  if (label?.trim()) setTasks(ts => [...ts, { id: Date.now(), label: label.trim(), done: false }]);
+                }} style={{ marginTop: 2, background: "none", border: "none", color: C.sidebarMuted, fontSize: 10, cursor: "pointer", textAlign: "left", padding: 0, fontFamily: "inherit" }}>
+                  + Ajouter une tâche
+                </button>
+              </div>
+            </div>
+          )}
           <div style={{ marginBottom: 16 }}>
             {tabs.map(t => (
               <button key={t.id} onClick={() => { setTab(t.id); setCalSel(null); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 18px", border: "none", cursor: "pointer", fontSize: 12, fontWeight: tab === t.id ? 600 : 400, backgroundColor: tab === t.id ? C.sidebarActive : "transparent", color: tab === t.id ? C.sidebarAccent : C.sidebarMuted, borderLeft: tab === t.id ? `3px solid ${C.sidebarAccent}` : "3px solid transparent", transition: "all .15s" }}>
