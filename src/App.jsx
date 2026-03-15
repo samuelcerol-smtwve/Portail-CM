@@ -870,6 +870,10 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
   const [ficheTab, setFicheTab] = useState("posts");
+  // ─── INVOICE IMPORT STATE ───
+  const [invoiceUploading, setInvoiceUploading] = useState(false);
+  const [invoicePreview, setInvoicePreview] = useState(null);
+  const [showInvoiceConfirm, setShowInvoiceConfirm] = useState(false);
   const [tasks, setTasks] = useState([
     { id: 1, label: "Relancer Maison Soleil", done: false },
     { id: 2, label: "Créer post Instagram Flora", done: false },
@@ -1054,6 +1058,115 @@ export default function App() {
   };
   const delRdv = id => setRdvs(r => r.filter(x => x.id !== id));
   const fmtSecs = s => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  // ─── IMPORT FACTURE ───
+  const handleInvoiceUpload = async (file, targetClientId) => {
+    if (!file || file.type !== "application/pdf") {
+      fire("❌ Veuillez sélectionner un fichier PDF", "err");
+      return;
+    }
+    setInvoiceUploading(true);
+    fire("⏳ Analyse du PDF en cours...");
+    try {
+      // 1. Convertir en base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // 2. Envoyer à l'API d'extraction
+      const res = await fetch("/api/parse-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdfBase64: base64, fileName: file.name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erreur extraction");
+
+      // 3. Uploader le PDF vers Supabase Storage
+      let pdfUrl = "";
+      try {
+        const fileName = `factures/${Date.now()}-${file.name}`;
+        const { data: storageData, error: storageErr } = await supabase.storage
+          .from("factures")
+          .upload(fileName, file, { contentType: "application/pdf", upsert: false });
+        if (!storageErr) {
+          const { data: { publicUrl } } = supabase.storage.from("factures").getPublicUrl(storageData.path);
+          pdfUrl = publicUrl;
+        }
+      } catch (e) {
+        console.warn("Upload PDF Supabase échoué, on continue sans URL:", e);
+      }
+
+      // 4. Afficher preview pour confirmation
+      setInvoicePreview({
+        ...data.invoice,
+        pdfUrl,
+        fileName: file.name,
+        targetClientId: targetClientId || null,
+      });
+      setShowInvoiceConfirm(true);
+      fire("✅ PDF analysé — vérifiez les informations");
+
+    } catch (err) {
+      console.error(err);
+      fire("❌ " + err.message, "err");
+    }
+    setInvoiceUploading(false);
+  };
+
+  const confirmInvoiceSave = async () => {
+    if (!invoicePreview) return;
+    setSaving(true);
+    try {
+      const inv = invoicePreview;
+      const clientId = inv.targetClientId;
+
+      // Trouver le client Airtable correspondant
+      const cl = clients.find(c => c.id === clientId || c.airtableId === clientId);
+
+      // Sauvegarder dans Airtable via la fonction existante
+      // On réutilise createPost pattern mais pour factures
+      const fields = {
+        "Numéro": inv.numero || `F-AUTO-${Date.now()}`,
+        "Date": inv.date || new Date().toISOString().split("T")[0],
+        "MontantTTC": inv.montantTTC || inv.montantHT || 0,
+        "Description": inv.description || "",
+        "Statut": inv.statut || "pending",
+        "FichierPDF": inv.pdfUrl || "",
+        "Source": "import_auto",
+      };
+      if (inv.dateEcheance) fields["DateEcheance"] = inv.dateEcheance;
+      if (cl?.airtableId) fields["Client"] = [cl.airtableId];
+
+      // Mettre à jour l'état local immédiatement
+      const newInvoice = {
+        id: `F-AUTO-${Date.now()}`,
+        date: inv.date || new Date().toISOString().split("T")[0],
+        period: inv.description || "",
+        amount: inv.montantTTC || inv.montantHT || 0,
+        status: inv.statut || "pending",
+        description: inv.description || "",
+        pdfUrl: inv.pdfUrl || "",
+      };
+      if (clientId) {
+        setFactures(prev => ({
+          ...prev,
+          [clientId]: [...(prev[clientId] || []), newInvoice],
+        }));
+      }
+
+      setShowInvoiceConfirm(false);
+      setInvoicePreview(null);
+      fire("✅ Facture importée et sauvegardée !");
+    } catch (err) {
+      console.error(err);
+      fire("❌ Erreur sauvegarde: " + err.message, "err");
+    }
+    setSaving(false);
+  };
 
   const approve = async (id) => {
     const post = posts.find(p => p.id === id);
@@ -1658,11 +1771,15 @@ export default function App() {
                           })}
                         </div>
                     }
-                    <div style={{ marginTop: 16, padding: 20, borderRadius: 14, border: `2px dashed ${C.accent}30`, backgroundColor: C.accentSoft, textAlign: "center", cursor: "pointer" }} onClick={() => fire("📎 Dépôt facture (simulation)")}>
-                      <div style={{ fontSize: 24, marginBottom: 6, opacity: .5 }}>📎</div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: C.accent }}>Déposer une facture</div>
-                      <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Le client sera notifié automatiquement</div>
-                    </div>
+                    <label style={{ display: "block", marginTop: 16, padding: 20, borderRadius: 14, border: `2px dashed ${invoiceUploading ? C.accent : C.accent + "40"}`, backgroundColor: invoiceUploading ? C.accentSoft : C.bgLight, textAlign: "center", cursor: invoiceUploading ? "wait" : "pointer", transition: "all .2s" }}
+                      onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = C.accent; }}
+                      onDragLeave={e => { e.currentTarget.style.borderColor = C.accent + "40"; }}
+                      onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleInvoiceUpload(f, selClient); }}>
+                      <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={e => e.target.files[0] && handleInvoiceUpload(e.target.files[0], selClient)} disabled={invoiceUploading} />
+                      <div style={{ fontSize: 24, marginBottom: 6, opacity: .5 }}>{invoiceUploading ? "⏳" : "📎"}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.accent }}>{invoiceUploading ? "Analyse en cours..." : "Déposer une facture PDF"}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{invoiceUploading ? "Claude extrait les données automatiquement" : "Le client sera notifié automatiquement"}</div>
+                    </label>
                   </div>
                 )}
 
@@ -2639,6 +2756,93 @@ export default function App() {
                 ✅ Ajouter le RDV
               </button>
               <button onClick={() => setShowAddRdv(false)} style={{ padding: "11px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMATION FACTURE IMPORTÉE */}
+      {showInvoiceConfirm && invoicePreview && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, animation: "fadeIn .2s ease" }} onClick={() => setShowInvoiceConfirm(false)}>
+          <div style={{ backgroundColor: C.card, borderRadius: 20, padding: 28, width: 520, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.25)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 20, color: C.text }}>Facture détectée ✨</h3>
+                <p style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Vérifiez les informations extraites avant de sauvegarder</p>
+              </div>
+              <button onClick={() => setShowInvoiceConfirm(false)} style={{ border: "none", background: "none", fontSize: 18, cursor: "pointer", color: C.muted }}>✕</button>
+            </div>
+
+            {/* Champs extraits éditables */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                { label: "N° Facture", key: "numero", placeholder: "F-2026-001" },
+                { label: "Client détecté", key: "clientNom", placeholder: "Nom du client" },
+                { label: "Description", key: "description", placeholder: "Prestation de community management" },
+                { label: "Date d'émission", key: "date", type: "date" },
+                { label: "Date d'échéance", key: "dateEcheance", type: "date" },
+              ].map(f => (
+                <div key={f.key}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 4 }}>{f.label}</label>
+                  <input type={f.type || "text"} value={invoicePreview[f.key] || ""} placeholder={f.placeholder}
+                    onChange={e => setInvoicePreview(p => ({ ...p, [f.key]: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }}
+                    onFocus={e => e.target.style.borderColor = C.accent} onBlur={e => e.target.style.borderColor = C.border} />
+                </div>
+              ))}
+
+              {/* Montants */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 4 }}>Montant HT (€)</label>
+                  <input type="number" value={invoicePreview.montantHT || ""} placeholder="0"
+                    onChange={e => setInvoicePreview(p => ({ ...p, montantHT: Number(e.target.value) }))}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none" }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 4 }}>Montant TTC (€) *</label>
+                  <input type="number" value={invoicePreview.montantTTC || ""} placeholder="0"
+                    onChange={e => setInvoicePreview(p => ({ ...p, montantTTC: Number(e.target.value) }))}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: `1.5px solid ${C.accent}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit", outline: "none", fontWeight: 600 }} />
+                </div>
+              </div>
+
+              {/* Statut */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 4 }}>Statut</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[{ v: "pending", l: "⏳ En attente" }, { v: "paid", l: "✅ Payée" }, { v: "overdue", l: "🚨 En retard" }].map(s => (
+                    <button key={s.v} onClick={() => setInvoicePreview(p => ({ ...p, statut: s.v }))}
+                      style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: `1.5px solid ${invoicePreview.statut === s.v ? INV_STATUS[s.v]?.color || C.accent : C.border}`, backgroundColor: invoicePreview.statut === s.v ? (INV_STATUS[s.v]?.bg || C.accentSoft) : "transparent", color: invoicePreview.statut === s.v ? (INV_STATUS[s.v]?.color || C.accent) : C.muted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                      {s.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Associer à un client */}
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 4 }}>Associer au client</label>
+                <select value={invoicePreview.targetClientId || ""} onChange={e => setInvoicePreview(p => ({ ...p, targetClientId: e.target.value }))}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 13, color: C.text, backgroundColor: C.bgLight, fontFamily: "inherit", outline: "none" }}>
+                  <option value="">— Sélectionner un client —</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+
+              {/* PDF info */}
+              {invoicePreview.pdfUrl && (
+                <div style={{ padding: "8px 12px", borderRadius: 8, backgroundColor: C.greenSoft, border: `1px solid ${C.green}25`, fontSize: 11, color: C.green, display: "flex", alignItems: "center", gap: 6 }}>
+                  ✅ PDF stocké — <a href={invoicePreview.pdfUrl} target="_blank" rel="noreferrer" style={{ color: C.green, fontWeight: 600 }}>voir le fichier</a>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 22 }}>
+              <button onClick={confirmInvoiceSave} disabled={saving || !invoicePreview.montantTTC} style={{ flex: 1, padding: "12px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 14, cursor: saving ? "wait" : "pointer", opacity: !invoicePreview.montantTTC ? .5 : 1, boxShadow: `0 4px 14px ${C.accentGlow}` }}>
+                {saving ? "Sauvegarde..." : "✅ Confirmer et sauvegarder"}
+              </button>
+              <button onClick={() => { setShowInvoiceConfirm(false); setInvoicePreview(null); }} style={{ padding: "12px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
             </div>
           </div>
         </div>
