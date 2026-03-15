@@ -841,8 +841,6 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [calSel, setCalSel] = useState(null);
   const [ficheTab, setFicheTab] = useState("posts");
-  const [billingObjectif, setBillingObjectif] = useState(3000);
-  const [editingObjectif, setEditingObjectif] = useState(false);
   const [tasks, setTasks] = useState([
     { id: 1, label: "Relancer Maison Soleil", done: false },
     { id: 2, label: "Créer post Instagram Flora", done: false },
@@ -1904,7 +1902,7 @@ export default function App() {
                 const caEnCours = allInvoices.filter(i => i.status === "pending").reduce((s, i) => s + i.amount, 0);
                 const encaisse = allInvoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0);
                 const delta = caRealise - encaisse;
-                const objectifMensuel = billingObjectif;
+                const objectifMensuel = objectifCA;
                 const progressPct = Math.min((caRealise / objectifMensuel) * 100, 100);
                 const manqueAFacturer = Math.max(objectifMensuel - caRealise, 0);
                 const MOIS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
@@ -1933,18 +1931,18 @@ export default function App() {
                           <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: .8, marginBottom: 6 }}>Objectif mensuel</div>
                           {editingObjectif ? (
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <input type="number" id="objectif-input" defaultValue={billingObjectif} autoFocus
-                                onKeyDown={e => { if (e.key === "Enter") { setBillingObjectif(Number(e.target.value)); setEditingObjectif(false); } if (e.key === "Escape") setEditingObjectif(false); }}
+                              <input type="number" value={objectifInput} onChange={e => setObjectifInput(e.target.value)} autoFocus
+                                onKeyDown={e => { if (e.key === "Enter") { setObjectifCA(Number(objectifInput)); setEditingObjectif(false); } if (e.key === "Escape") setEditingObjectif(false); }}
                                 style={{ width: 110, padding: "6px 10px", borderRadius: 8, border: `1.5px solid ${C.accent}`, fontSize: 18, fontWeight: 700, color: C.text, backgroundColor: C.bgLight, fontFamily: "inherit", outline: "none" }} />
                               <span style={{ fontSize: 18, fontWeight: 700, color: C.accent }}>€</span>
-                              <button onClick={() => { const v = document.getElementById("objectif-input").value; setBillingObjectif(Number(v)); setEditingObjectif(false); }}
+                              <button onClick={() => { setObjectifCA(Number(objectifInput)); setEditingObjectif(false); }}
                                 style={{ padding: "6px 14px", borderRadius: 8, border: "none", backgroundColor: C.accent, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>OK</button>
                               <button onClick={() => setEditingObjectif(false)} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>✕</button>
                             </div>
                           ) : (
                             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <span style={{ fontSize: 30, fontWeight: 800, color: C.text }}>{billingObjectif.toLocaleString()} €</span>
-                              <button onClick={() => setEditingObjectif(true)} style={{ padding: "3px 10px", borderRadius: 6, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer" }}>✏️ Modifier</button>
+                              <span style={{ fontSize: 30, fontWeight: 800, color: C.text }}>{objectifCA.toLocaleString()} €</span>
+                              <button onClick={() => { setObjectifInput(String(objectifCA)); setEditingObjectif(true); }} style={{ padding: "3px 10px", borderRadius: 6, border: `1px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 11, cursor: "pointer" }}>✏️ Modifier</button>
                             </div>
                           )}
                         </div>
