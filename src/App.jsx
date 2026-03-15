@@ -1034,17 +1034,20 @@ export default function App() {
     const um = { role: "user", content: aiIn };
     setAiMsgs(m => [...m, um]); setAiIn(""); setAiLoad(true);
     try {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const r = await fetch("/api/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 1000,
-          system: `Tu es une assistante expert Community Management pour "Petit bout de com", une agence CM indépendante. Aide la CM avec ses clients, ses contenus et ses stratégies. Réponds en français avec des emojis. Clients actuels : ${clients.map(c => c.name).join(", ")}.`,
+          systemPrompt: `Tu es une assistante expert Community Management pour "Petit bout de com", une agence CM indépendante. Aide la CM avec ses clients, ses contenus et ses stratégies. Réponds en français avec des emojis. Clients actuels : ${clients.map(c => c.name).join(", ")}.`,
           messages: [...aiMsgs, um].map(m => ({ role: m.role, content: m.content }))
         })
       });
       const d = await r.json();
-      setAiMsgs(m => [...m, { role: "assistant", content: d.content?.[0]?.text || "Erreur de réponse." }]);
-    } catch { setAiMsgs(m => [...m, { role: "assistant", content: "⚠️ Erreur de connexion à l'API." }]); }
+      if (!r.ok) throw new Error(d.error || "Erreur API");
+      setAiMsgs(m => [...m, { role: "assistant", content: d.text || "Erreur de réponse." }]);
+    } catch (err) {
+      setAiMsgs(m => [...m, { role: "assistant", content: `⚠️ ${err.message}` }]);
+    }
     setAiLoad(false);
   };
 
