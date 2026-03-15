@@ -361,7 +361,7 @@ function EditPostForm({ post, onSave, onCancel }) {
         <input value={img} onChange={e => setImg(e.target.value)} placeholder="https://..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 12, color: C.text, backgroundColor: C.bgLight, boxSizing: "border-box", fontFamily: "inherit" }} />
       </div>
       <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
-        <button onClick={() => onSave({ caption, date, status, contentType, img })} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.tealDark})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+        <button onClick={() => onSave({ caption, date, status, contentType, img })} style={{ flex: 1, padding: "11px 0", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.accent}, ${C.lavender})`, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
           💾 Enregistrer
         </button>
         <button onClick={onCancel} style={{ padding: "11px 18px", borderRadius: 12, border: `1.5px solid ${C.border}`, backgroundColor: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>Annuler</button>
@@ -474,6 +474,7 @@ function PostCard({ post, client, onApprove, onApproveVisual, onRevision, isClie
 }
 
 // ─── CALENDAR VIEW (avec filtres Posts / RDVs / Tout) ───
+const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
 function CalendarView({ posts, rdvs, clients, calSel, setCalSel, isClient, approve, revise, posts_all }) {
   const today = new Date();
